@@ -1,0 +1,39 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+
+
+}
+
+model Usuario {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  email       String   @unique
+  contrasena  String
+  rol         Rol      @default(VISITANTE)
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  @@map("usuarios")
+}
+
+enum Rol {
+  ADMINISTRADOR
+  DIRECTOR_ADMINISTRATIVO
+  CONTADOR
+  CAJERO
+  DIRECCION_ACADEMICA
+  COORDINACION_ACADEMICA
+  SECRETARIA_DOCENTE
+  ORIENTADOR_ESCOLAR
+  MAESTRO
+  TUTOR
+  ESTUDIANTE
+  VISITANTE
+}

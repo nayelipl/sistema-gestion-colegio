@@ -1,0 +1,28 @@
+-- Esquema de la base de datos
+-- Sistema de Gestión de Colegio
+
+CREATE DATABASE IF NOT EXISTS colegio_db;
+USE colegio_db;
+
+CREATE TABLE usuarios (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  nombre     VARCHAR(255) NOT NULL,
+  email      VARCHAR(255) NOT NULL UNIQUE,
+  contrasena VARCHAR(255) NOT NULL,
+  rol        ENUM(
+    'ADMINISTRADOR',
+    'DIRECTOR_ADMINISTRATIVO',
+    'CONTADOR',
+    'CAJERO',
+    'DIRECCION_ACADEMICA',
+    'COORDINACION_ACADEMICA',
+    'SECRETARIA_DOCENTE',
+    'ORIENTADOR_ESCOLAR',
+    'MAESTRO',
+    'TUTOR',
+    'ESTUDIANTE',
+    'VISITANTE'
+  ) NOT NULL DEFAULT 'VISITANTE',
+  activo     BOOLEAN NOT NULL DEFAULT TRUE,
+  creadoEn   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
