@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id         Int      @id @default(autoincrement())
+  nombre     String
+  email      String   @unique
+  contrasena String
+  rol        Rol      @default(VISITANTE)
+  activo     Boolean  @default(true)
+  creadoEn   DateTime @default(now())
+
+  @@map("usuarios")
+}
+
+model Empleado {
+  id       Int      @id @default(autoincrement())
+  nombre   String
+  apellido String
+  cedula   String   @unique
+  email    String   @unique
+  telefono String?
+  salario  Decimal? @db.Decimal(10, 2)
+  activo   Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  asignaciones AsignacionMaestro[]
+
+  @@map("empleados")
+}
+
+model Tutor {
+  id        Int      @id @default(autoincrement())
+  codigo    String   @unique
+  nombre    String
+  apellido  String
+  cedula    String   @unique
+  email     String   @unique
+  telefono  String?
+  direccion String?
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+
+  estudiantes Estudiante[]
+  pagos       Pago[]
+
+  @@map("tutores")
+}
+
+model Estudiante {
+  id        Int       @id @default(autoincrement())
+  codigo    String    @unique
+  nombre    String
+  apellido  String
+  cedula    String?   @unique
+  RNE       String?   @unique
+  fechaNac  DateTime?
+  tutorId   Int?
+  seccionId Int?
+  activo    Boolean   @default(true)
+  creadoEn  DateTime  @default(now())
+
+  tutor          Tutor?         @relation(fields: [tutorId], references: [id])
+  seccion        Seccion?       @relation(fields: [seccionId], references: [id])
+  calificaciones Calificacion[]
+  asistencias    Asistencia[]
+
+  @@map("estudiantes")
+}
+
+model Uniforme {
+  id       Int      @id @default(autoincrement())
+  tipo     String
+  talla    String
+  precio   Decimal  @db.Decimal(10, 2)
+  cantidad Int      @default(0)
+  vendidos Int      @default(0)
+  creadoEn DateTime @default(now())
+
+  @@map("uniformes")
+}
+
+model Pago {
+  id          Int      @id @default(autoincrement())
+  tutorId     Int
+  concepto    String
+  monto       Decimal  @db.Decimal(10, 2)
+  montoPagado Decimal  @db.Decimal(10, 2)
+  cambio      Decimal  @db.Decimal(10, 2)
+  tipo        String   @default("PRESENCIAL")
+  creadoEn    DateTime @default(now())
+
+  tutor       Tutor    @relation(fields: [tutorId], references: [id])
+
+  @@map("pagos")
+}
+
+model Curso {
+  id       Int      @id @default(autoincrement())
+  codigo   String   @unique
+  nombre   String
+  nivel    String
+  activo   Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  secciones Seccion[]
+
+  @@map("cursos")
+}
+
+model Seccion {
+  id       Int      @id @default(autoincrement())
+  codigo   String   @unique
+  nombre   String
+  cursoId  Int
+  cupos    Int      @default(30)
+  activo   Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  curso        Curso               @relation(fields: [cursoId], references: [id])
+  estudiantes  Estudiante[]
+  asignaciones AsignacionMaestro[]
+
+  @@map("secciones")
+}
+
+model Asignatura {
+  id       Int      @id @default(autoincrement())
+  codigo   String   @unique
+  nombre   String
+  activo   Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  calificaciones Calificacion[]
+  asignaciones   AsignacionMaestro[]
+
+  @@map("asignaturas")
+}
+
+model Calificacion {
+  id           Int        @id @default(autoincrement())
+  estudianteId Int
+  asignaturaId Int
+  periodo      String
+  nota         Float
+  estado       String     @default("PENDIENTE")
+  creadoEn     DateTime   @default(now())
+
+  estudiante   Estudiante @relation(fields: [estudianteId], references: [id])
+  asignatura   Asignatura @relation(fields: [asignaturaId], references: [id])
+
+  @@map("calificaciones")
+}
+
+model Asistencia {
+  id           Int        @id @default(autoincrement())
+  estudianteId Int
+  fecha        DateTime
+  estado       String
+  creadoEn     DateTime   @default(now())
+
+  estudiante   Estudiante @relation(fields: [estudianteId], references: [id])
+
+  @@map("asistencias")
+}
+
+model Publicacion {
+  id        Int      @id @default(autoincrement())
+  titulo    String
+  contenido String   @db.Text
+  tipo      String   @default("COMUNICADO")
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+
+  @@map("publicaciones")
+}
+
+model AsignacionMaestro {
+  id           Int      @id @default(autoincrement())
+  maestroId    Int
+  seccionId    Int
+  asignaturaId Int
+  creadoEn     DateTime @default(now())
+
+  maestro    Empleado   @relation(fields: [maestroId], references: [id])
+  seccion    Seccion    @relation(fields: [seccionId], references: [id])
+  asignatura Asignatura @relation(fields: [asignaturaId], references: [id])
+
+  @@map("asignaciones_maestro")
+}
+
+enum Rol {
+  ADMINISTRADOR
+  DIRECTOR_ADMINISTRATIVO
+  CONTADOR
+  CAJERO
+  DIRECCION_ACADEMICA
+  COORDINACION_ACADEMICA
+  SECRETARIA_DOCENTE
+  ORIENTADOR_ESCOLAR
+  MAESTRO
+  TUTOR
+  ESTUDIANTE
+  VISITANTE
+}
