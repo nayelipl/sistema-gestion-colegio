@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sistema de Gestión de Colegio
 
-## Getting Started
+Aplicación web para la administración escolar, desarrollada con Next.js. Este proyecto tiene como objetivo facilitar la gestión de información académica y administrativa de una institución educativa.
 
-First, run the development server:
+Esta plataforma web está diseñada para ser fácil de navegar, cada usuario podrá consultar y utilizar herramientas adaptadas a su función específica. Esto facilitará tareas como la evaluación de calificaciones, el control de asistencia, la administración de pagos al personal, la difusión de actividades escolares y el seguimiento del progreso académico de los estudiantes. La implementación de este sistema busca simplificar los procesos administrativos, reducir la posibilidad de errores y potenciar la calidad de la experiencia educativa.
+
+## 🛠️ Tecnologías utilizadas
+
+| Tecnología | ¿Para qué sirve? |
+|------------|------------------|
+| **Next.js** | Organiza las páginas y APIs del proyecto. Corre sobre Node.js. |
+| **React** | Crea los componentes visuales (botones, tablas, formularios) que ve el usuario. |
+| **TypeScript** | Añade reglas al código para evitar errores. Todo está escrito en `.ts` y `.tsx`. |
+| **Node.js** | Es el entorno donde se ejecuta la aplicación en el servidor. |
+| **Prisma** | Traduce el código TypeScript a consultas SQL y se conecta con MySQL. |
+| **MySQL** | Base de datos donde se almacena toda la información (estudiantes, notas, etc.). |
+| **API** | Mensajero interno que comunica el frontend con la base de datos. |
+| **JSON** | Formato en el que viajan los datos entre la API y la interfaz. |
+
+## 📁 Estructura del proyecto
+📁 prisma/ → Modelos y migraciones de base de datos
+📁 public/ → Archivos estáticos (imágenes, iconos)
+📁 src/app/ → Código fuente principal
+📁 estudiantes/ → Módulo de estudiantes
+📁 profesores/ → Módulo de profesores
+📁 cursos/ → Módulo de cursos
+📁 calificaciones/→ Módulo de calificaciones
+📁 asistencia/ → Módulo de asistencia
+📁 dashboard/ → Panel de control
+📁 api/ → Endpoints REST (backend)
+📄 package.json → Dependencias y scripts
+📄 tsconfig.json → Configuración de TypeScript
+📄 next.config.ts → Configuración de Next.js
+
+
+### 📌 Convención de rutas (App Router)
+
+| Carpeta/Archivo | Ruta en el navegador | Descripción |
+|-----------------|---------------------|-------------|
+| `app/page.tsx` | `/` | Página de inicio |
+| `app/estudiantes/page.tsx` | `/estudiantes` | Listado de estudiantes |
+| `app/estudiantes/[id]/page.tsx` | `/estudiantes/1` | Detalle de estudiante con ID 1 |
+| `app/api/estudiantes/route.ts` | `/api/estudiantes` | API para gestionar estudiantes |
+
+El proyecto utiliza **Next.js App Router**, donde cada subcarpeta dentro de `src/app` representa una ruta del navegador. Las rutas dinámicas usan corchetes `[id]`. Las APIs están en `src/app/api` y siguen el mismo principio de organización.
+
+## 🚀 Instalación y uso
+
+### 1. Clonar el repositorio
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/nayelipl/sistema-gestion-colegio.git
+cd sistema-gestion-colegio
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Instalar dependencias
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Configurar variables de entorno
+Crea un archivo .env en la raíz del proyecto y configura la conexión a la base de datos:
+```env
+DATABASE_URL="mysql://usuario:contraseña@localhost:3306/nombre_bd"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Ejecutar migraciones de base de datos
+```bash
+npx prisma migrate dev
+```
 
-## Learn More
+### 5. Ejecutar en modo desarrollo
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+La aplicación estará disponible en [http://localhost:3000](http://localhost:3000)
