@@ -2,6 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+export async function GET() {
+  try {
+    const empleados = await prisma.empleado.findMany({
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        email: true,
+      },
+      orderBy: { nombre: "asc" },
+    });
+
+    const empleadosConRol = await Promise.all(
+      empleados.map(async (emp) => {
+        const usuario = await prisma.usuario.findUnique({
+          where: { email: emp.email },
+          select: { rol: true }
+        });
+        return {
+          id: emp.id,
+          nombre: emp.nombre,
+          apellido: emp.apellido,
+          rol: usuario?.rol || null
+        };
+      })
+    );
+    
+    return NextResponse.json(empleadosConRol);
+  } catch (error) {
+    console.error("Error GET /api/usuarios/empleados:", error);
+    return NextResponse.json([]);
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { nombre, apellido, cedula, email, telefono, salario, rol } = await req.json();
@@ -14,7 +48,7 @@ export async function POST(req: NextRequest) {
       where: { OR: [{ cedula }, { email }] },
     });
     if (existeEmpleado) return NextResponse.json({ error: "Ya existe un empleado con esa cédula o correo." }, { status: 409 });
-
+    
     const existeUsuario = await prisma.usuario.findUnique({ where: { email } });
     if (existeUsuario) return NextResponse.json({ error: "Ya existe un usuario con ese correo." }, { status: 409 });
 

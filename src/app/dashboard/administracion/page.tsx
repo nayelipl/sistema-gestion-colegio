@@ -79,7 +79,6 @@ export default function AdministracionPage() {
           </div>
         )}
 
-        {/* Acciones del sistema */}
         <div style={s.seccionTitulo}>⚙️ Acciones del Sistema</div>
         <div style={s.accionesGrid}>
 
@@ -98,6 +97,19 @@ export default function AdministracionPage() {
           </div>
 
           <div style={s.accionCard}>
+            <div style={s.accionIcono}>💰</div>
+            <div>
+              <h3 style={s.accionTitulo}>Tarifas del Año Escolar</h3>
+              <p style={s.accionDesc}>
+                Configura inscripción, colegiatura por grado y transporte para el año escolar.
+              </p>
+              <Link href="/dashboard/administracion/tarifas" style={s.btnAccion}>
+                💰 Configurar Tarifas
+              </Link>
+            </div>
+          </div>
+
+          <div style={s.accionCard}>
             <div style={s.accionIcono}>🛡️</div>
             <div>
               <h3 style={s.accionTitulo}>Gestión de Roles y Permisos</h3>
@@ -109,33 +121,6 @@ export default function AdministracionPage() {
               </Link>
             </div>
           </div>
-
-          <div style={s.accionCard}>
-            <div style={s.accionIcono}>🚌</div>
-            <div>
-              <h3 style={s.accionTitulo}>Gestión de Transporte</h3>
-              <p style={s.accionDesc}>
-                Administra las rutas de transporte escolar y la asignación de estudiantes.
-              </p>
-              <Link href="/dashboard/transporte" style={s.btnAccion}>
-                🚌 Ir a Transporte
-              </Link>
-            </div>
-          </div>
-
-          <div style={s.accionCard}>
-            <div style={s.accionIcono}>👕</div>
-            <div>
-              <h3 style={s.accionTitulo}>Inventario de Uniformes</h3>
-              <p style={s.accionDesc}>
-                Gestiona el stock de uniformes escolares disponibles para la venta.
-              </p>
-              <Link href="/dashboard/inventario" style={s.btnAccion}>
-                👕 Ir a Inventario
-              </Link>
-            </div>
-          </div>
-
         </div>
 
         {/* Info del sistema */}

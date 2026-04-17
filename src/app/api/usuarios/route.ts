@@ -1,24 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function GET() {
   try {
     const [empleadosRaw, tutores, estudiantes] = await Promise.all([
-      prisma.empleado.findMany({ orderBy: { creadoEn: "desc" } }),
+      prisma.empleado.findMany({
+        select: { id: true, nombre: true, apellido: true, cedula: true, email: true, telefono: true, activo: true },
+      }),
       prisma.tutor.findMany({
         orderBy: { creadoEn: "desc" },
-        include: { estudiantes: { select: { id: true, nombre: true, apellido: true } } },
+        include: { estudiantes: { select: { id: true, nombre: true, apellido: true, fechaNac: true } } },
       }),
       prisma.estudiante.findMany({
         orderBy: { creadoEn: "desc" },
         include: {
-          tutor:   { select: { id: true, nombre: true, apellido: true, codigo: true } },
-          seccion: { select: { id: true, nombre: true, codigo: true, curso: { select: { nombre: true } } } },
+          tutor:   { select: { id: true, nombre: true, apellido: true, cuentaNo: true } },
+          seccion: { select: { id: true, aula: true, codigo: true, curso: { select: { grado: true } } } },
         },
       }),
     ]);
 
-    // Traer el rol de cada empleado desde la tabla usuarios por email
     const empleados = await Promise.all(
       empleadosRaw.map(async (emp) => {
         const usuario = await prisma.usuario.findUnique({

@@ -7,7 +7,7 @@ import Link from "next/link";
 type Estudiante  = { id: number; codigo: string; nombre: string; apellido: string };
 type Asignacion  = {
   id: number;
-  seccion:    { nombre: string; curso: { nombre: string } };
+  seccion:    { aula: string; curso: { grado: string } };
   asignatura: { id: number; nombre: string; codigo: string };
 };
 type Calificacion = {
@@ -102,8 +102,28 @@ export default function MisCursosPage() {
   };
 
   // Asignaturas del maestro para el formulario de calificaciones
-  const misAsignaturas = asignaciones.map(a => a.asignatura)
-    .filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i);
+    const misAsignaturas = asignaciones && asignaciones.length > 0 
+      ? asignaciones.map(a => a.asignatura)
+          .filter((a, i, arr) => a && arr.findIndex(x => x?.id === a?.id) === i)
+      : [];
+
+    // Si no hay asignaciones, mostrar mensaje
+    if (asignaciones.length === 0) {
+      return (
+        <main style={s.main}>
+          <nav style={s.nav}>
+            <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
+            <span style={s.navTitle}>📚 Mis Cursos</span>
+            <span style={s.navUser}>👤 {session?.user?.name}</span>
+          </nav>
+          <div style={s.contenido}>
+            <div style={s.card}>
+              <p>No tienes cursos asignados todavía. Contacta al administrador.</p>
+            </div>
+          </div>
+        </main>
+      );
+    }
 
   return (
     <main style={s.main}>
@@ -122,17 +142,21 @@ export default function MisCursosPage() {
         </div>
 
         {/* Resumen de secciones asignadas */}
-        {asignaciones.length > 0 && (
-          <div style={s.resumenGrid}>
-            {asignaciones.map((a, i) => (
+        <div style={s.resumenGrid}>
+          {asignaciones.length === 0 ? (
+            <p>No tienes cursos asignados.</p>
+          ) : (
+            asignaciones.map((a, i) => (
               <div key={a.id} style={s.resumenCard}>
                 <p style={s.resumenLabel}>{a.asignatura.nombre}</p>
-                <p style={s.resumenValor}>{a.seccion.curso.nombre}</p>
-                <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>{a.seccion.nombre}</p>
+                <p style={s.resumenValor}>{a.seccion.aula}</p>
+                <p style={{ fontSize: "11px", color: "#888", margin: 0 }}>
+                  {a.seccion.curso.grado}
+                </p>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
 
         <div style={s.tabs}>
           <button onClick={() => setTab("asistencia")}
