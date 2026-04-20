@@ -65,9 +65,16 @@ const MODULOS = [
   {
     nombre: "Módulo Financiero",
     icono:  "💰",
-    desc:   "Pagos, cuentas por cobrar e inventario.",
+    desc:   "Cuentas por cobrar e inventario.",
     href:   "/dashboard/financiero",
     roles:  ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Cuentas por Cobrar",
+    icono: "📊",
+    desc: "Control de deudores y cargos pendientes",
+    href: "/dashboard/financiero/cuentas-por-cobrar",
+    roles: ["ADMINISTRADOR"],
   },
   {
     nombre: "Inscripciones",
@@ -75,6 +82,27 @@ const MODULOS = [
     desc:   "Registro de tutores y estudiantes.",
     href:   "/dashboard/inscripciones",
     roles:  ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Transporte Escolar",
+    icono:  "🚌",
+    desc:   "Gestión de rutas y asignación de estudiantes al transporte escolar.",
+    href:   "/dashboard/transporte",
+    roles:  ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Estado de Cuenta",
+    icono: "📄",
+    desc: "Ver movimientos y balance de cuentas de tutores",
+    href: "/dashboard/financiero/estado-cuenta",
+    roles: ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Cobro de Cargos a Tutores",
+    icono: "💰",
+    desc: "Registro de pagos presenciales de colegiatura y transporte",
+    href: "/dashboard/financiero/cobro-cargos",
+    roles: ["ADMINISTRADOR"],
   },
   {
     nombre: "Comunicaciones",
@@ -115,7 +143,34 @@ const MODULOS = [
     href:   "/dashboard/financiero",
     roles:  ["CONTADOR"],
   },
-
+  {
+    nombre: "Transporte Escolar",
+    icono:  "🚌",
+    desc:   "Gestión de rutas y asignación de estudiantes al transporte escolar.",
+    href:   "/dashboard/transporte",
+    roles:  ["CONTADOR"],
+  },
+  {
+  nombre: "Estado de Cuenta",
+  icono: "📄",
+  desc: "Ver movimientos y balance de cuentas de tutores",
+  href: "/dashboard/financiero/estado-cuenta",
+  roles: ["CONTADOR"],
+  },
+  {
+  nombre: "Cobro de Cargos a Tutores",
+  icono: "💰",
+  desc: "Registro de pagos presenciales de colegiatura y transporte",
+  href: "/dashboard/financiero/cobro-cargos",
+  roles: ["CONTADOR"],
+  },
+  {
+    nombre: "Cuentas por Cobrar",
+    icono: "📊",
+    desc: "Control de deudores y cargos pendientes",
+    href: "/dashboard/financiero/cuentas-por-cobrar",
+    roles: ["CONTADOR"],
+  },
   // ── CAJERO ─────────────────────────────────────────────
   {
     nombre: "Inscripciones",
@@ -125,11 +180,32 @@ const MODULOS = [
     roles:  ["CAJERO"],
   },
   {
-    nombre: "Pagos Presenciales",
-    icono:  "🏧",
-    desc:   "Recibir pagos, estado de cuenta del tutor y cuadre de caja.",
-    href:   "/dashboard/pagos-presenciales",
+    nombre: "Matrícula",
+    icono:  "🎓",
+    desc:   "Registro de matrícula estudiantil.",
+    href:   "/dashboard/matricula",
     roles:  ["CAJERO"],
+  },
+  {
+    nombre: "Transporte Escolar",
+    icono:  "🚌",
+    desc:   "Gestión de rutas y asignación de estudiantes al transporte escolar.",
+    href:   "/dashboard/transporte",
+    roles:  ["CAJERO"],
+  },
+  {
+  nombre: "Estado de Cuenta",
+  icono: "📄",
+  desc: "Ver movimientos y balance de cuentas de tutores",
+  href: "/dashboard/financiero/estado-cuenta",
+  roles: ["CAJERO"],
+  },
+  {
+  nombre: "Cobro de Cargos a Tutores",
+  icono: "💰",
+  desc: "Registro de pagos presenciales de colegiatura y transporte",
+  href: "/dashboard/financiero/cobro-cargos",
+  roles: ["CAJERO"],
   },
 
   // ── DIRECCIÓN ACADÉMICA ────────────────────────────────
@@ -214,17 +290,17 @@ const MODULOS = [
 
   // ── TUTOR ──────────────────────────────────────────────
   {
-    nombre: "Mis Representados",
-    icono:  "👨‍👧",
-    desc:   "Calificaciones, asistencia, horario y materiales de mis hijos.",
-    href:   "/dashboard/representados",
-    roles:  ["TUTOR"],
+  nombre: "Estado de Cuenta",
+  icono: "📄",
+  desc: "Ver mis movimientos y balance de cuenta",
+  href: "/dashboard/financiero/estado-cuenta",
+  roles: ["TUTOR"],
   },
   {
-    nombre: "Estado de Cuenta",
-    icono:  "💳",
-    desc:   "Ver estado de cuenta y realizar pagos en línea.",
-    href:   "/dashboard/pagos",
+    nombre: "Mis Representados",
+    icono:  "👨‍👧",
+    desc:   "Calificaciones, asistencia, horario y materiales de mis representados.",
+    href:   "/dashboard/representados",
     roles:  ["TUTOR"],
   },
   {

@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Todos los campos son obligatorios." }, { status: 400 });
     }
 
-    // Verificar que no existe ya esa asignación
     const existe = await prisma.asignacionMaestro.findFirst({
       where: {
         maestroId:    parseInt(maestroId),

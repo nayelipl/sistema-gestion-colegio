@@ -14,8 +14,8 @@ type Tutor = {
   estudiantes?: { id: number; nombre: string; apellido: string }[];
 };
 type Estudiante = {
-  id: number; codigo: string; nombre: string; apellido: string; cedula?: string;
-  RNE?: string; fechaNac?: string; activo: boolean;
+  id: number; codigo: string; nombre: string; apellido: string; RNE?: string;
+   fechaNac?: string; activo: boolean;
   tutor?: { id: number; nombre: string; apellido: string; codigo: string } | null;
 };
 type Tab = "empleados" | "tutores" | "estudiantes";
@@ -73,12 +73,22 @@ export default function UsuariosPage() {
     );
 
   const abrirNuevo = () => {
-    setForm({});
-    setSeleccionado(null);
-    setModal("nuevo");
-    setError("");
-    setContrasenaTemp("");
-  };
+  setForm({
+    nombre: "",
+    apellido: "",
+    cedula: "",
+    email: "",
+    telefono: "",
+    ocupacion: "",
+    nombreContactoAlterno: "",
+    telefonoContactoAlterno: "",
+    contrasena: ""
+  });
+  setSeleccionado(null);
+  setModal("nuevo");
+  setError("");
+  setContrasenaTemp("");
+};
 
   const abrirEditar = (u: any) => {
     setSeleccionado(u);
@@ -212,7 +222,6 @@ export default function UsuariosPage() {
                   {tab === "estudiantes" && <>
                     <th style={s.th}>Código</th>
                     <th style={s.th}>Nombre completo</th>
-                    <th style={s.th}>Cédula</th>
                     <th style={s.th}>RNE</th>
                     <th style={s.th}>Tutor</th>
                     <th style={s.th}>Estado</th>
@@ -322,10 +331,10 @@ function FormEmpleado({ form, setForm, esNuevo }: any) {
   const c = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
   return (
     <div style={s.formGrid}>
-      <Campo label="Nombre *"      name="nombre"   value={form.nombre}   onChange={c} />
-      <Campo label="Apellido *"    name="apellido" value={form.apellido} onChange={c} />
-      <Campo label="Cédula *"      name="cedula"   value={form.cedula}   onChange={c} />
-      <Campo label="Email *"       name="email"    value={form.email}    onChange={c} type="email" />
+      <Campo label="Nombre *"      name="nombre"   value={form.nombre}   onChange={c} required />
+      <Campo label="Apellido *"    name="apellido" value={form.apellido} onChange={c} required />
+      <Campo label="Cédula *"      name="cedula"   value={form.cedula}   onChange={c} required />
+      <Campo label="Email *"       name="email"    value={form.email}    onChange={c} type="email" required />
       <Campo label="Teléfono"      name="telefono" value={form.telefono} onChange={c} />
       <Campo label="Salario (RD$)" name="salario"  value={form.salario}  onChange={c} type="number" />
       <div style={{ gridColumn: "1 / -1" }}>
@@ -352,14 +361,17 @@ function FormTutor({ form, setForm, esNuevo }: any) {
   const c = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
   return (
     <div style={s.formGrid}>
-      <Campo label="Nombre *"   name="nombre"    value={form.nombre}    onChange={c} />
-      <Campo label="Apellido *" name="apellido"  value={form.apellido}  onChange={c} />
-      <Campo label="Cédula *"   name="cedula"    value={form.cedula}    onChange={c} />
-      <Campo label="Email *"    name="email"     value={form.email}     onChange={c} type="email" />
-      <Campo label="Teléfono"   name="telefono"  value={form.telefono}  onChange={c} />
-      <Campo label="Dirección"  name="direccion" value={form.direccion} onChange={c} />
+      <Campo label="Nombre *"       name="nombre"    value={form.nombre}    onChange={c} required />
+      <Campo label="Apellido *"     name="apellido"  value={form.apellido}  onChange={c}  required />
+      <Campo label="Cédula *"       name="cedula"    value={form.cedula}    onChange={c}  required />
+      <Campo label="Teléfono"       name="telefono"  value={form.telefono}  onChange={c} required />
+      <Campo label="Dirección"      name="direccion" value={form.direccion} onChange={c} required />
+      <Campo label="Email *"        name="email"     value={form.email}     onChange={c} type="email" required />
+      <Campo label="Ocupación"      name="ocupacion" value={form.ocupacion} onChange={c} />
+      <Campo label="Nombre de contacto alterno *" value={form.nombreContactoAlterno} onChange={c} required />
+      <Campo label="Teléfono de contacto alterno" name="telefonoContactoAlterno" value={form.telefonoContactoAlterno} onChange={c} required />
       {esNuevo && (
-        <Campo label="Contraseña *" name="contrasena" value={form.contrasena} onChange={c} type="password" />
+        <Campo label="Contraseña *" name="contrasena" value={form.contrasena} onChange={c} type="password" required />
       )}
     </div>
   );
@@ -369,11 +381,10 @@ function FormEstudiante({ form, setForm, tutores, esNuevo }: any) {
   const c = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
   return (
     <div style={s.formGrid}>
-      <Campo label="Nombre *"            name="nombre"   value={form.nombre}   onChange={c} />
-      <Campo label="Apellido *"          name="apellido" value={form.apellido} onChange={c} />
-      <Campo label="Cédula"              name="cedula"   value={form.cedula}   onChange={c} />
+      <Campo label="Nombre *"            name="nombre"   value={form.nombre}   onChange={c} required />
+      <Campo label="Apellido *"          name="apellido" value={form.apellido} onChange={c} required />
       <Campo label="RNE"                 name="RNE"      value={form.RNE}      onChange={c} />
-      <Campo label="Fecha de nacimiento" name="fechaNac" value={form.fechaNac} onChange={c} type="date" />
+      <Campo label="Fecha de nacimiento" name="fechaNac" value={form.fechaNac} onChange={c} type="date" required />
       <div>
         <label style={s.label}>Tutor / Representante</label>
         <select name="tutorId" value={form.tutorId || ""} onChange={c} style={s.input}>
@@ -387,8 +398,8 @@ function FormEstudiante({ form, setForm, tutores, esNuevo }: any) {
       </div>
       {esNuevo && (
         <>
-          <Campo label="Email *"      name="email"      value={form.email}      onChange={c} type="email" />
-          <Campo label="Contraseña *" name="contrasena" value={form.contrasena} onChange={c} type="password" />
+          <Campo label="Email *"      name="email"      value={form.email}      onChange={c} type="email" required />
+          <Campo label="Contraseña *" name="contrasena" value={form.contrasena} onChange={c} type="password" required />
         </>
       )}
     </div>

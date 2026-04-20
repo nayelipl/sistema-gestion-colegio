@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const asignaturas = await prisma.asignatura.findMany({ orderBy: { creadoEn: "desc" } });
+    const asignaturas = await prisma.asignatura.findMany({ 
+      orderBy: { nombre: "asc" }
+    });
     return NextResponse.json({ asignaturas });
   } catch (error) {
     return NextResponse.json({ error: "Error al obtener asignaturas." }, { status: 500 });

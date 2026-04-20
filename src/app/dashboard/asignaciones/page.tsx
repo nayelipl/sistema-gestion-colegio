@@ -7,11 +7,11 @@ import Link from "next/link";
 type Asignacion = {
   id: number;
   maestro:    { nombre: string; apellido: string; email: string };
-  seccion:    { nombre: string; codigo: string; curso: { nombre: string } };
+  seccion:    { aula: string; codigo: string; curso: { grado: string } };
   asignatura: { nombre: string; codigo: string };
 };
 type Empleado   = { id: number; nombre: string; apellido: string; email: string };
-type Seccion    = { id: number; nombre: string; codigo: string; curso: { nombre: string } };
+type Seccion    = { id: number; aula: string; codigo: string; curso: { grado: string } };
 type Asignatura = { id: number; nombre: string; codigo: string };
 
 const ROLES_PERMITIDOS = ["ADMINISTRADOR", "DIRECCION_ACADEMICA"];
@@ -90,7 +90,7 @@ export default function AsignacionesPage() {
   };
 
   const filtradas = asignaciones.filter(a =>
-    `${a.maestro.nombre} ${a.maestro.apellido} ${a.seccion.nombre} ${a.asignatura.nombre}`
+    `${a.maestro.nombre} ${a.maestro.apellido} ${a.seccion.aula} ${a.asignatura.nombre}`
       .toLowerCase().includes(busqueda.toLowerCase())
   );
 
@@ -127,7 +127,6 @@ export default function AsignacionesPage() {
               <thead><tr style={s.thead}>
                 <th style={s.th}>Maestro</th>
                 <th style={s.th}>Sección</th>
-                <th style={s.th}>Curso</th>
                 <th style={s.th}>Asignatura</th>
                 <th style={s.th}>Acciones</th>
               </tr></thead>
@@ -135,8 +134,7 @@ export default function AsignacionesPage() {
                 {filtradas.map((a, i) => (
                   <tr key={a.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa" }}>
                     <td style={s.td}>{a.maestro.nombre} {a.maestro.apellido}</td>
-                    <td style={s.td}><span style={s.seccionBadge}>{a.seccion.nombre}</span></td>
-                    <td style={s.td}>{a.seccion.curso.nombre}</td>
+                    <td style={s.td}><span style={s.seccionBadge}>{a.seccion.aula}</span></td>
                     <td style={s.td}>{a.asignatura.nombre}</td>
                     <td style={s.td}>
                       <button onClick={() => eliminar(a.id)} style={s.btnEliminar}>
@@ -172,7 +170,7 @@ export default function AsignacionesPage() {
                     <option value="">Selecciona sección</option>
                     {secciones.map(sec => (
                       <option key={sec.id} value={sec.id}>
-                        {sec.curso.nombre} — {sec.nombre} ({sec.codigo})
+                        {sec.curso.grado} — {sec.aula} ({sec.codigo})
                       </option>
                     ))}
                   </select>

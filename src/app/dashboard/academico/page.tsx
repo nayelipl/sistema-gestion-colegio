@@ -5,9 +5,18 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type Tab = "cursos" | "secciones" | "asignaturas";
-type Curso = { id: number; codigo: string; nombre: string; nivel: string; activo: boolean; secciones: Seccion[] };
-type Seccion = { id: number; codigo: string; nombre: string; cupos: number; activo: boolean; curso?: Curso };
+type Curso = { id: number; codigo: string; grado: string; nivel: string; activo: boolean; secciones: Seccion[] };
+type Seccion = {
+  id: number;
+  codigo: string;
+  aula: string;
+  cupos: number;
+  maestroEncargado?: { id: number; nombre: string; apellido: string };
+  activo: boolean;
+  curso?: Curso
+};
 type Asignatura = { id: number; codigo: string; nombre: string; activo: boolean };
+type Empleado = {  id: number;  nombre: string;  apellido: string;  rol: string; };
 
 const NIVELES = [
   "Nivel Inicial",
@@ -18,22 +27,22 @@ const NIVELES = [
 ];
 
 const CURSOS_PREDEFINIDOS = [
-  { codigo: "1-0-0-0", nombre: "Párvulo", nivel: "Nivel Inicial" },
-  { codigo: "1-0-0",   nombre: "Pre Kínder", nivel: "Nivel Inicial" },
-  { codigo: "1-0",     nombre: "Kínder", nivel: "Nivel Inicial" },
-  { codigo: "1-1",     nombre: "Pre Primero", nivel: "Nivel Inicial" },
-  { codigo: "2-1",     nombre: "Primero Primaria", nivel: "Nivel Primario — Primer Ciclo" },
-  { codigo: "2-2",     nombre: "Segundo Primaria", nivel: "Nivel Primario — Primer Ciclo" },
-  { codigo: "2-3",     nombre: "Tercero Primaria", nivel: "Nivel Primario — Primer Ciclo" },
-  { codigo: "2-4",     nombre: "Cuarto Primaria", nivel: "Nivel Primario — Segundo Ciclo" },
-  { codigo: "2-5",     nombre: "Quinto Primaria", nivel: "Nivel Primario — Segundo Ciclo" },
-  { codigo: "2-6",     nombre: "Sexto Primaria", nivel: "Nivel Primario — Segundo Ciclo" },
-  { codigo: "3-1",     nombre: "Primero Secundaria", nivel: "Nivel Secundario — Primer Ciclo" },
-  { codigo: "3-2",     nombre: "Segundo Secundaria", nivel: "Nivel Secundario — Primer Ciclo" },
-  { codigo: "3-3",     nombre: "Tercero Secundaria", nivel: "Nivel Secundario — Primer Ciclo" },
-  { codigo: "3-4",     nombre: "Cuarto Secundaria", nivel: "Nivel Secundario — Segundo Ciclo" },
-  { codigo: "3-5",     nombre: "Quinto Secundaria", nivel: "Nivel Secundario — Segundo Ciclo" },
-  { codigo: "3-6",     nombre: "Sexto Secundaria", nivel: "Nivel Secundario — Segundo Ciclo" },
+  { codigo: "1-0-0-0", grado: "Párvulo", nivel: "Nivel Inicial" },
+  { codigo: "1-0-0",   grado: "Pre Kínder", nivel: "Nivel Inicial" },
+  { codigo: "1-0",     grado: "Kínder", nivel: "Nivel Inicial" },
+  { codigo: "1-1",     grado: "Pre Primero", nivel: "Nivel Inicial" },
+  { codigo: "2-1",     grado: "Primero Primaria", nivel: "Nivel Primario — Primer Ciclo" },
+  { codigo: "2-2",     grado: "Segundo Primaria", nivel: "Nivel Primario — Primer Ciclo" },
+  { codigo: "2-3",     grado: "Tercero Primaria", nivel: "Nivel Primario — Primer Ciclo" },
+  { codigo: "2-4",     grado: "Cuarto Primaria", nivel: "Nivel Primario — Segundo Ciclo" },
+  { codigo: "2-5",     grado: "Quinto Primaria", nivel: "Nivel Primario — Segundo Ciclo" },
+  { codigo: "2-6",     grado: "Sexto Primaria", nivel: "Nivel Primario — Segundo Ciclo" },
+  { codigo: "3-1",     grado: "Primero Secundaria", nivel: "Nivel Secundario — Primer Ciclo" },
+  { codigo: "3-2",     grado: "Segundo Secundaria", nivel: "Nivel Secundario — Primer Ciclo" },
+  { codigo: "3-3",     grado: "Tercero Secundaria", nivel: "Nivel Secundario — Primer Ciclo" },
+  { codigo: "3-4",     grado: "Cuarto Secundaria", nivel: "Nivel Secundario — Segundo Ciclo" },
+  { codigo: "3-5",     grado: "Quinto Secundaria", nivel: "Nivel Secundario — Segundo Ciclo" },
+  { codigo: "3-6",     grado: "Sexto Secundaria", nivel: "Nivel Secundario — Segundo Ciclo" },
 ];
 
 const ROLES_PERMITIDOS = [
@@ -45,6 +54,7 @@ export default function AcademicoPage() {
   const router = useRouter();
   const [tab, setTab]               = useState<Tab>("cursos");
   const [cursos, setCursos]         = useState<Curso[]>([]);
+  const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [secciones, setSecciones]   = useState<Seccion[]>([]);
   const [asignaturas, setAsignaturas] = useState<Asignatura[]>([]);
   const [cargando, setCargando]     = useState(true);
@@ -60,6 +70,10 @@ export default function AcademicoPage() {
   }, [status, router]);
 
   useEffect(() => { cargarDatos(); }, []);
+
+  useEffect(() => {
+  fetch("/api/usuarios/empleados").then(r => r.json()).then(d => setEmpleados(d));
+  }, []);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -176,15 +190,16 @@ export default function AcademicoPage() {
                 <tr style={s.thead}>
                   {tab === "cursos" && <>
                     <th style={s.th}>Código</th>
-                    <th style={s.th}>Nombre</th>
+                    <th style={s.th}>Grado</th>
                     <th style={s.th}>Nivel</th>
                     <th style={s.th}>Secciones</th>
                     <th style={s.th}>Estado</th>
                   </>}
                   {tab === "secciones" && <>
                     <th style={s.th}>Código</th>
-                    <th style={s.th}>Nombre</th>
-                    <th style={s.th}>Curso</th>
+                    <th style={s.th}>Aula</th>
+                    <th style={s.th}>Grado</th>
+                    <th style={s.th}>Maestro Encargado</th>
                     <th style={s.th}>Cupos</th>
                     <th style={s.th}>Estado</th>
                   </>}
@@ -199,7 +214,7 @@ export default function AcademicoPage() {
                 {tab === "cursos" && cursos.map((c, i) => (
                   <tr key={c.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa" }}>
                     <td style={s.td}><code style={s.codigo}>{c.codigo}</code></td>
-                    <td style={s.td}>{c.nombre}</td>
+                    <td style={s.td}>{c.grado}</td>
                     <td style={s.td}><span style={s.nivelBadge}>{c.nivel}</span></td>
                     <td style={s.td}>{c.secciones?.length ?? 0} sección(es)</td>
                     <td style={s.td}><span style={c.activo ? s.activo : s.inactivo}>{c.activo ? "Activo" : "Inactivo"}</span></td>
@@ -208,8 +223,9 @@ export default function AcademicoPage() {
                 {tab === "secciones" && secciones.map((sec, i) => (
                   <tr key={sec.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa" }}>
                     <td style={s.td}><code style={s.codigo}>{sec.codigo}</code></td>
-                    <td style={s.td}>{sec.nombre}</td>
-                    <td style={s.td}>{sec.curso?.nombre ?? "—"}</td>
+                    <td style={s.td}>{sec.aula}</td>
+                    <td style={s.td}>{sec.curso?.grado ?? "—"}</td>
+                    <td style={s.td}>{sec.maestroEncargado?.nombre ?? "—"} {sec.maestroEncargado?.apellido ?? "—"}</td>
                     <td style={s.td}>{sec.cupos}</td>
                     <td style={s.td}><span style={sec.activo ? s.activo : s.inactivo}>{sec.activo ? "Activo" : "Inactivo"}</span></td>
                   </tr>
@@ -250,15 +266,15 @@ export default function AcademicoPage() {
                       <option value="">Selecciona o escribe</option>
                       {CURSOS_PREDEFINIDOS.map(cp => (
                         <option key={cp.codigo} value={cp.codigo}
-                          onClick={() => setForm({ ...form, codigo: cp.codigo, nombre: cp.nombre, nivel: cp.nivel })}>
-                          {cp.codigo} — {cp.nombre}
+                          onClick={() => setForm({ ...form, codigo: cp.codigo, grado: cp.grado, nivel: cp.nivel })}>
+                          {cp.codigo}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label style={s.label}>Nombre *</label>
-                    <input name="nombre" value={form.nombre || ""} onChange={c} style={s.input} required />
+                    <label style={s.label}>Grado *</label>
+                    <input name="grado" value={form.grado || ""} onChange={c} style={s.input} required placeholder="Ej.: Primero" />
                   </div>
                   <div style={{ gridColumn: "1 / -1" }}>
                     <label style={s.label}>Nivel *</label>
@@ -272,18 +288,27 @@ export default function AcademicoPage() {
                 {tab === "secciones" && <>
                   <div>
                     <label style={s.label}>Código *</label>
-                    <input name="codigo" value={form.codigo || ""} onChange={c} style={s.input} required placeholder="Ej: 2-1-A" />
+                    <input name="codigo" value={form.codigo || ""} onChange={c} style={s.input} required placeholder="Ej.: 2-1 A" />
                   </div>
                   <div>
-                    <label style={s.label}>Nombre *</label>
-                    <input name="nombre" value={form.nombre || ""} onChange={c} style={s.input} required placeholder="Ej: Primero A" />
+                    <label style={s.label}>Aula *</label>
+                    <input name="aula" value={form.aula || ""} onChange={c} style={s.input} required placeholder="Ej.: Primero Primaria A" />
                   </div>
                   <div>
-                    <label style={s.label}>Curso *</label>
+                    <label style={s.label}>Grado *</label>
                     <select name="cursoId" value={form.cursoId || ""} onChange={c} style={s.input} required>
-                      <option value="">Selecciona curso</option>
+                      <option value="">Selecciona el grado</option>
                       {cursos.map(cur => (
-                        <option key={cur.id} value={cur.id}>{cur.nombre} ({cur.codigo})</option>
+                        <option key={cur.id} value={cur.id}>{cur.grado} ({cur.codigo})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={s.label}>Maestro Encargado (opcional)</label>
+                    <select name="maestroEncargadoId" value={form.maestroEncargadoId || ""} onChange={c} style={s.input}>
+                      <option value="">Sin asignar</option>
+                      {empleados.filter(emp => emp.rol === "MAESTRO").map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.nombre} {emp.apellido}</option>
                       ))}
                     </select>
                   </div>

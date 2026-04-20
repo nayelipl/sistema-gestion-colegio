@@ -7,6 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Rol {
+  ADMINISTRADOR
+  DIRECTOR_ADMINISTRATIVO
+  CONTADOR
+  CAJERO
+  DIRECCION_ACADEMICA
+  COORDINACION_ACADEMICA
+  SECRETARIA_DOCENTE
+  ORIENTADOR_ESCOLAR
+  MAESTRO
+  TUTOR
+  ESTUDIANTE
+  VISITANTE
+}
+
 model Usuario {
   id         Int      @id @default(autoincrement())
   nombre     String
@@ -30,102 +45,148 @@ model Empleado {
   activo   Boolean  @default(true)
   creadoEn DateTime @default(now())
 
-  asignaciones AsignacionMaestro[]
+  asignaciones    AsignacionMaestro[]
+  seccionesACargo Seccion[]
 
   @@map("empleados")
 }
 
 model Tutor {
-  id        Int      @id @default(autoincrement())
-  codigo    String   @unique
-  nombre    String
-  apellido  String
-  cedula    String   @unique
-  email     String   @unique
-  telefono  String?
-  direccion String?
-  activo    Boolean  @default(true)
-  creadoEn  DateTime @default(now())
+  id                      Int      @id @default(autoincrement())
+  cuentaNo                String   @unique
+  nombre                  String
+  apellido                String
+  tipoDocIdentidad        String   @default("CEDULA") // "CEDULA" o "PASAPORTE"
+  numeroDocIdentidad      String   @unique
+  email                   String   @unique
+  celular                 String?
+  telefonoResidencial     String?
+  telefonoTrabajo         String?
+  ocupacion               String
+  nombreContactoAlterno   String
+  telefonoContactoAlterno String?
+  direccion               String?
+  activo                  Boolean  @default(true)
+  creadoEn                DateTime @default(now())
 
-  estudiantes Estudiante[]
-  pagos       Pago[]
+  estudiantes      Estudiante[]
+  cargos           Cargo[]
+  recibosPago      ReciboPago[]
+  movimientos      MovimientoContable[]
+  transportes      TransporteEstudiante[]
+  cuentasPorCobrar CuentaPorCobrar[]
 
   @@map("tutores")
 }
 
 model Estudiante {
-  id        Int       @id @default(autoincrement())
-  codigo    String    @unique
-  nombre    String
-  apellido  String
-  cedula    String?   @unique
-  RNE       String?   @unique
-  fechaNac  DateTime?
-  tutorId   Int?
-  seccionId Int?
-  activo    Boolean   @default(true)
-  creadoEn  DateTime  @default(now())
+  id            Int       @id @default(autoincrement())
+  codigo        String    @unique
+  nombre        String
+  apellido      String
+  RNE           String?   @unique
+  fechaNac      DateTime?
+  lugarNac      String
+  edad          Float?
+  sexo          String?
+  direccion     String?
+  tutorId       Int
+  parentesco    String?
+  guardianLegal String?
+  viveCon       String? // Ambos padres, Padre, Madre, Tutor, Otro
+  folio         String?
+  libro         String?
+  numeroActa    String?
+  anioActa      String?
+  seccionId     Int?
+  activo        Boolean   @default(true)
+  creadoEn      DateTime  @default(now())
 
-  tutor          Tutor?         @relation(fields: [tutorId], references: [id])
-  seccion        Seccion?       @relation(fields: [seccionId], references: [id])
-  calificaciones Calificacion[]
-  asistencias    Asistencia[]
+  padreNombre              String?
+  padreApellido            String?
+  padreTipoDocIdentidad    String? // CEDULA, PASAPORTE
+  padreNumeroDocIdentidad  String?
+  padreOcupacion           String?
+  padreCelular             String?
+  padreTelefonoResidencial String?
+  padreTelefonoTrabajo     String?
+  padreDireccion           String?
+  padreEmail               String?
+
+  madreNombre              String?
+  madreApellido            String?
+  madreTipoDocIdentidad    String?
+  madreNumeroDocIdentidad  String?
+  madreOcupacion           String?
+  madreCelular             String?
+  madreTelefonoResidencial String?
+  madreTelefonoTrabajo     String?
+  madreDireccion           String?
+  madreEmail               String?
+
+  tutor           Tutor?                 @relation(fields: [tutorId], references: [id])
+  seccion         Seccion?               @relation(fields: [seccionId], references: [id])
+  matriculas      Matricula[]
+  calificaciones  Calificacion[]
+  asistencias     Asistencia[]
+  rutas           EstudianteRuta[]
+  cargos          Cargo[]
+  movimientos     MovimientoContable[]
+  transportes     TransporteEstudiante[]
+  ventasUniformes VentaUniforme[]
 
   @@map("estudiantes")
 }
 
-model Uniforme {
-  id       Int      @id @default(autoincrement())
-  tipo     String
-  talla    String
-  precio   Decimal  @db.Decimal(10, 2)
-  cantidad Int      @default(0)
-  vendidos Int      @default(0)
-  creadoEn DateTime @default(now())
+model Matricula {
+  id            Int      @id @default(autoincrement())
+  inscripcionNo String   @unique // INSC-0000000000
+  fecha         DateTime @default(now())
+  estudianteId  Int
+  seccionId     Int
+  anioEscolar   String
+  valorCobrado  Decimal  @db.Decimal(10, 2)
+  observaciones String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
 
-  @@map("uniformes")
-}
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+  seccion    Seccion    @relation(fields: [seccionId], references: [id])
 
-model Pago {
-  id          Int      @id @default(autoincrement())
-  tutorId     Int
-  concepto    String
-  monto       Decimal  @db.Decimal(10, 2)
-  montoPagado Decimal  @db.Decimal(10, 2)
-  cambio      Decimal  @db.Decimal(10, 2)
-  tipo        String   @default("PRESENCIAL")
-  creadoEn    DateTime @default(now())
-
-  tutor       Tutor    @relation(fields: [tutorId], references: [id])
-
-  @@map("pagos")
+  @@map("matriculas")
 }
 
 model Curso {
   id       Int      @id @default(autoincrement())
   codigo   String   @unique
-  nombre   String
+  grado    String
   nivel    String
   activo   Boolean  @default(true)
   creadoEn DateTime @default(now())
 
   secciones Seccion[]
+  tarifas   TarifaCurso[]
 
   @@map("cursos")
 }
 
 model Seccion {
-  id       Int      @id @default(autoincrement())
-  codigo   String   @unique
-  nombre   String
-  cursoId  Int
-  cupos    Int      @default(30)
-  activo   Boolean  @default(true)
-  creadoEn DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  codigo             String   @unique
+  aula               String
+  cursoId            Int
+  maestroEncargadoId Int?
+  cupos              Int      @default(30)
+  inscritos          Int      @default(0)
+  activo             Boolean  @default(true)
+  creadoEn           DateTime @default(now())
 
-  curso        Curso               @relation(fields: [cursoId], references: [id])
-  estudiantes  Estudiante[]
-  asignaciones AsignacionMaestro[]
+  curso            Curso               @relation(fields: [cursoId], references: [id])
+  maestroEncargado Empleado?           @relation(fields: [maestroEncargadoId], references: [id])
+  matriculas       Matricula[]
+  estudiantes      Estudiante[]
+  asignaciones     AsignacionMaestro[]
+  horarios         Horario[]
 
   @@map("secciones")
 }
@@ -143,31 +204,192 @@ model Asignatura {
   @@map("asignaturas")
 }
 
+model AsignacionMaestro {
+  id           Int      @id @default(autoincrement())
+  maestroId    Int
+  seccionId    Int
+  asignaturaId Int
+  creadoEn     DateTime @default(now())
+
+  maestro    Empleado   @relation(fields: [maestroId], references: [id])
+  seccion    Seccion    @relation(fields: [seccionId], references: [id])
+  asignatura Asignatura @relation(fields: [asignaturaId], references: [id])
+  horarios   Horario[]
+
+  @@unique([maestroId, seccionId, asignaturaId])
+  @@map("asignaciones_maestro")
+}
+
+model Horario {
+  id            Int      @id @default(autoincrement())
+  diaSemana     Int // 1=Lunes, 2=Martes... 5=Viernes
+  horaInicio    String
+  horaFin       String
+  seccionId     Int
+  asignacionId  Int
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  seccion    Seccion           @relation(fields: [seccionId], references: [id])
+  asignacion AsignacionMaestro @relation(fields: [asignacionId], references: [id])
+
+  @@map("horarios")
+}
+
 model Calificacion {
-  id           Int        @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   estudianteId Int
   asignaturaId Int
   periodo      String
   nota         Float
-  estado       String     @default("PENDIENTE")
-  creadoEn     DateTime   @default(now())
+  estado       String   @default("PENDIENTE")
+  creadoEn     DateTime @default(now())
 
-  estudiante   Estudiante @relation(fields: [estudianteId], references: [id])
-  asignatura   Asignatura @relation(fields: [asignaturaId], references: [id])
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+  asignatura Asignatura @relation(fields: [asignaturaId], references: [id])
 
   @@map("calificaciones")
 }
 
 model Asistencia {
-  id           Int        @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   estudianteId Int
   fecha        DateTime
   estado       String
-  creadoEn     DateTime   @default(now())
+  creadoEn     DateTime @default(now())
 
-  estudiante   Estudiante @relation(fields: [estudianteId], references: [id])
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
 
   @@map("asistencias")
+}
+
+model TarifaAnioEscolar {
+  id            Int      @id @default(autoincrement())
+  anioEscolar   String   @unique
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  valorInscripcion  Decimal @db.Decimal(10, 2)
+  recargoPorcentaje Float   @default(6.0)
+
+  colegiaturaNumCuotas  Int @default(11)
+  colegiaturaDiaDesde   Int @default(25)
+  colegiaturaDiaHasta   Int @default(30)
+  colegiaturaDiasGracia Int @default(5)
+
+  transporteNumCuotas  Int @default(10)
+  transporteDiaDesde   Int @default(25)
+  transporteDiaHasta   Int @default(30)
+  transporteDiasGracia Int @default(5)
+
+  configuracionesCuotas ConfiguracionCuota[]
+  tarifasCurso          TarifaCurso[]
+  tarifasTransporte     TarifaTransporte[]
+
+  @@map("tarifas_anio_escolar")
+}
+
+model TarifaCurso {
+  id               Int      @id @default(autoincrement())
+  tarifaAnioId     Int
+  cursoId          Int
+  cuotaColegiatura Decimal  @db.Decimal(10, 2)
+  costoMateriales  Decimal  @db.Decimal(10, 2)
+  creadoEn         DateTime @default(now())
+
+  tarifaAnio TarifaAnioEscolar @relation(fields: [tarifaAnioId], references: [id])
+  curso      Curso             @relation(fields: [cursoId], references: [id])
+
+  @@unique([tarifaAnioId, cursoId])
+  @@map("tarifas_curso")
+}
+
+model TarifaTransporte {
+  id           Int      @id @default(autoincrement())
+  tarifaAnioId Int
+  tipo         String
+  valorAnual   Decimal  @db.Decimal(10, 2)
+  inscripcion  Decimal  @default(0) @db.Decimal(10, 2)
+  creadoEn     DateTime @default(now())
+
+  tarifaAnio TarifaAnioEscolar @relation(fields: [tarifaAnioId], references: [id])
+
+  @@map("tarifas_transporte")
+}
+
+model ConfiguracionCuota {
+  id               Int      @id @default(autoincrement())
+  tarifaAnioId     Int
+  tipo             String // "COLEGIATURA" O "TRANSPORTE"
+  numeroCuota      Int // 1, 2, 3...
+  mes              Int // 1-12 (Enero=1, Septiembre=9)
+  anio             Int // 2025, 2026
+  diaVencimiento   Int // 25
+  fechaVencimiento DateTime
+  creadoEn         DateTime @default(now())
+  actualizadoEn    DateTime @updatedAt
+
+  tarifaAnio TarifaAnioEscolar @relation(fields: [tarifaAnioId], references: [id])
+
+  @@unique([tarifaAnioId, numeroCuota])
+  @@map("configuracion_cuotas")
+}
+
+model Ruta {
+  id                Int      @id @default(autoincrement())
+  nombre            String
+  descripcion       String?
+  horarioRecogida   String
+  horarioRegreso    String?
+  puntosRecorrido   Json
+  conductor         String?
+  telefonoConductor String?
+  capacidad         Int      @default(20)
+  activo            Boolean  @default(true)
+  creadoEn          DateTime @default(now())
+  actualizadoEn     DateTime @updatedAt
+
+  asignaciones EstudianteRuta[]
+}
+
+model TransporteEstudiante {
+  id               Int       @id @default(autoincrement())
+  cargoNo          String    @unique
+  estudianteId     Int
+  tutorId          Int
+  tipo             String // COMPLETO, MEDIO (RECOGER), MEDIO (LLEVAR)
+  valorCuota       Decimal   @db.Decimal(10, 2)
+  duracionMeses    Int       @default(10)
+  montoTotal       Decimal   @db.Decimal(10, 2)
+  fechaInicio      DateTime
+  anioEscolar      String
+  estado           String    @default("ACTIVO") // ACTIVO, SUSPENDIDO, CANCELADO
+  fechaCancelacion DateTime?
+  observaciones    String?
+  creadoEn         DateTime  @default(now())
+  actualizadoEn    DateTime  @updatedAt
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+  tutor      Tutor      @relation(fields: [tutorId], references: [id])
+
+  @@map("transporte_estudiante")
+}
+
+model EstudianteRuta {
+  id            Int       @id @default(autoincrement())
+  estudianteId  Int
+  rutaId        Int
+  puntoRecogida Json?
+  fechaInicio   DateTime  @default(now())
+  fechaFin      DateTime?
+  activo        Boolean   @default(true)
+  observaciones String?
+
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+  ruta       Ruta       @relation(fields: [rutaId], references: [id])
+
+  @@unique([estudianteId, rutaId, fechaInicio])
 }
 
 model Publicacion {
@@ -181,31 +403,185 @@ model Publicacion {
   @@map("publicaciones")
 }
 
-model AsignacionMaestro {
-  id           Int      @id @default(autoincrement())
-  maestroId    Int
-  seccionId    Int
-  asignaturaId Int
-  creadoEn     DateTime @default(now())
+model Contador {
+  id            String    @id // "RI", "FA-COLE", "FA-INSC", etc.
+  ultimoNumero  Int       @default(0)
+  actualizadoEn DateTime  @updatedAt
 
-  maestro    Empleado   @relation(fields: [maestroId], references: [id])
-  seccion    Seccion    @relation(fields: [seccionId], references: [id])
-  asignatura Asignatura @relation(fields: [asignaturaId], references: [id])
-
-  @@map("asignaciones_maestro")
+  @@map("contadores")
 }
 
-enum Rol {
-  ADMINISTRADOR
-  DIRECTOR_ADMINISTRATIVO
-  CONTADOR
-  CAJERO
-  DIRECCION_ACADEMICA
-  COORDINACION_ACADEMICA
-  SECRETARIA_DOCENTE
-  ORIENTADOR_ESCOLAR
-  MAESTRO
-  TUTOR
-  ESTUDIANTE
-  VISITANTE
+enum TipoMovimiento {
+  CARGO
+  PAGO
+  AJUSTE
+}
+
+model MovimientoContable {
+  id           Int            @id @default(autoincrement())
+  docNo        String         @unique // FA-INSC-0000000000, FA-COLE-0000000000, etc.
+  fecha        DateTime       @default(now())
+  hora         String         @default("") // HH:MM:SS
+  tipo         TipoMovimiento // "CARGO", "PAGO", "AJUSTE"
+  descripcion  String
+  debito       Decimal        @default(0) @db.Decimal(10, 2)
+  credito      Decimal        @default(0) @db.Decimal(10, 2)
+  balance      Decimal        @default(0) @db.Decimal(10, 2)
+  tutorId      Int
+  estudianteId Int?
+  realizadoPor String
+  relacionId   Int? // ID de la inscripción, pago, etc.
+
+  tutor      Tutor       @relation(fields: [tutorId], references: [id])
+  estudiante Estudiante? @relation(fields: [estudianteId], references: [id])
+
+  @@map("movimientos_contables")
+}
+
+enum EstadoCargo {
+  PENDIENTE // No se ha pagado nada
+  ABONADA // Se pagó parcialmente
+  SALDA // Se pagó completamente
+  VENCIDA // Pasó la fecha de vencimiento
+}
+
+// Modelo para cargos de cuotas de colegiatura y transporte
+model Cargo {
+  id               Int         @id @default(autoincrement())
+  cargoNo          String // "CUOTA 6/11", "TRANSPORTE COMPLETO"
+  estudianteId     Int
+  tutorId          Int
+  tipo             String // "COLEGIATURA", "TRANSPORTE"
+  montoOriginal    Decimal     @db.Decimal(10, 2)
+  recargo          Decimal     @default(0) @db.Decimal(10, 2)
+  montoTotal       Decimal     @db.Decimal(10, 2)
+  fechaVencimiento DateTime
+  montoPagado      Decimal?    @db.Decimal(10, 2)
+  saldoPendiente   Decimal     @db.Decimal(10, 2)
+  anioEscolar      String?
+  estado           EstadoCargo @default(PENDIENTE)
+  creadoEn         DateTime    @default(now())
+  actualizadoEn    DateTime    @updatedAt
+
+  estudiante Estudiante  @relation(fields: [estudianteId], references: [id])
+  tutor      Tutor       @relation(fields: [tutorId], references: [id])
+  pagos      PagoCargo[]
+
+  @@map("cargos")
+}
+
+model PagoCargo {
+  id          Int      @id @default(autoincrement())
+  reciboId    Int
+  cargoId     Int
+  cuentaId    Int?
+  montoPagado Decimal  @db.Decimal(10, 2)
+  creadoEn    DateTime @default(now())
+
+  cargo           Cargo            @relation(fields: [cargoId], references: [id])
+  recibo          ReciboPago       @relation(fields: [reciboId], references: [id])
+  cuentaPorCobrar CuentaPorCobrar? @relation(fields: [cuentaId], references: [id])
+
+  @@map("pagos_cargo")
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+  CHEQUE
+}
+
+model ReciboPago {
+  id           Int        @id @default(autoincrement())
+  reciboNo     String     @unique // RI-0000000000
+  fecha        DateTime   @default(now())
+  hora         String
+  tutorId      Int
+  metodoPago   MetodoPago
+  subTotal     Decimal    @db.Decimal(10, 2)
+  recargoTotal Decimal    @default(0) @db.Decimal(10, 2)
+  descuento    Decimal    @default(0) @db.Decimal(10, 2)
+  total        Decimal    @db.Decimal(10, 2)
+  realizadoPor String
+  creadoEn     DateTime   @default(now())
+
+  tutor Tutor       @relation(fields: [tutorId], references: [id])
+  pagos PagoCargo[]
+
+  @@map("recibos_pago")
+}
+
+enum EstadoCuenta {
+  CORRIENTE // No ha llegado la fecha de vencimiento
+  PENDIENTE // Dentro del plazo de pago (25 al 30 + días de gracia)
+  VENCIDO // Pasó los días de gracia sin pago
+  ABONADA // Pagó parcialmente
+  SALDA // Pagó completamente
+}
+
+model CuentaPorCobrar {
+  id      Int   @id @default(autoincrement())
+  tutorId Int
+  tutor   Tutor @relation(fields: [tutorId], references: [id])
+
+  // Datos del cargo
+  cargoNo    String // "CUOTA 6/11", "TRANSPORTE COMPLETO", "1/2 TRANPORTE"
+  tipo       String // "COLEGIATURA", "TRANSPORTE"
+  valorCargo Decimal @db.Decimal(10, 2)
+  recargo    Decimal @default(0) @db.Decimal(10, 2)
+  montoTotal Decimal @db.Decimal(10, 2) // valorCargo + recargo
+
+  // Fechas
+  fechaEmision     DateTime  @default(now())
+  fechaVencimiento DateTime
+  fechaUltimoPago  DateTime?
+
+  // Pagos y balance
+  montoPagado    Decimal      @default(0) @db.Decimal(10, 2)
+  saldoPendiente Decimal      @db.Decimal(10, 2) // montoTotal - montoPagado
+  estado         EstadoCuenta @default(PENDIENTE)
+
+  cargoId Int?
+
+  actualizadoEn DateTime @updatedAt
+  creadoEn      DateTime @default(now())
+
+  pagos PagoCargo[]
+
+  @@map("cuentas_por_cobrar")
+}
+
+model Uniforme {
+  id            Int      @id @default(autoincrement())
+  nombre        String
+  talla         String
+  precio        Float
+  stock         Int
+  stockMinimo   Int      @default(1)
+  descripcion   String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  ventas VentaUniforme[]
+}
+
+model VentaUniforme {
+  id             Int        @id @default(autoincrement())
+  ventaNo        String     @unique
+  fecha          DateTime   @default(now())
+  uniformeId     Int
+  cantidad       Int
+  precioUnitario Float
+  total          Float
+  estudianteId   Int
+  metodoPago     MetodoPago
+  observaciones  String?
+  realizadoPor   String
+  cancelado      Boolean    @default(false)
+  canceladoPor   String?
+  canceladoEn    DateTime?
+
+  uniforme   Uniforme   @relation(fields: [uniformeId], references: [id])
+  estudiante Estudiante @relation(fields: [estudianteId], references: [id])
 }
