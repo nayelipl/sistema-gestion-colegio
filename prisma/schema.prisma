@@ -187,6 +187,7 @@ model Seccion {
   estudiantes      Estudiante[]
   asignaciones     AsignacionMaestro[]
   horarios         Horario[]
+  calificaciones   Calificacion[]
 
   @@map("secciones")
 }
@@ -240,14 +241,38 @@ model Calificacion {
   id           Int      @id @default(autoincrement())
   estudianteId Int
   asignaturaId Int
+  seccionId    Int
   periodo      String
-  nota         Float
-  estado       String   @default("PENDIENTE")
-  creadoEn     DateTime @default(now())
+
+  prueba1       Float?
+  prueba2       Float?
+  prueba3       Float?
+  prueba4       Float?
+  notaPruebas   Float?
+
+  practica1     Float?
+  practica2     Float?
+  notaPracticas Float?
+
+  trabajoFinal  Float?
+  asistencia    Float?
+
+  notaFinal     Float?
+  condicion     String   @default("PENDIENTE")
+
+  publicado     Boolean  @default(false)
+  publicadoPor  String?
+  publicadoEn   DateTime?
+  registradoPor String?
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
 
   estudiante Estudiante @relation(fields: [estudianteId], references: [id])
   asignatura Asignatura @relation(fields: [asignaturaId], references: [id])
+  seccion    Seccion    @relation(fields: [seccionId], references: [id])
 
+  @@unique([estudianteId, asignaturaId, seccionId, periodo])
   @@map("calificaciones")
 }
 
@@ -256,6 +281,8 @@ model Asistencia {
   estudianteId Int
   fecha        DateTime
   estado       String
+  publicado    Boolean  @default(false)
+  publicadoPor String?
   creadoEn     DateTime @default(now())
 
   estudiante Estudiante @relation(fields: [estudianteId], references: [id])
@@ -397,7 +424,12 @@ model Publicacion {
   titulo    String
   contenido String   @db.Text
   tipo      String   @default("COMUNICADO")
-  activo    Boolean  @default(true)
+  activo       Boolean  @default(true)
+  publicado    Boolean  @default(false)
+  destinatario String   @default("TODOS")
+  creadoPor    String?
+  publicadoPor String?
+  publicadoEn  DateTime?
   creadoEn  DateTime @default(now())
 
   @@map("publicaciones")
@@ -584,4 +616,19 @@ model VentaUniforme {
 
   uniforme   Uniforme   @relation(fields: [uniformeId], references: [id])
   estudiante Estudiante @relation(fields: [estudianteId], references: [id])
+}
+
+model CalendarioEscolar {
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  descripcion String?
+  fechaInicio DateTime
+  fechaFin    DateTime
+  tipo        String   // "INICIO_CLASES", "FIN_CLASES", "FERIADO", "EXAMEN", "ACTIVIDAD", "RECESO", "OTRO"
+  anio        String
+  publicado   Boolean  @default(false)
+  creadoEn    DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@map("calendario_escolar")
 }

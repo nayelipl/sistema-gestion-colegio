@@ -242,6 +242,27 @@ const MODULOS = [
 
   // ── SECRETARÍA DOCENTE ─────────────────────────────────
   {
+    nombre: "Horario Escolar",
+    icono:  "📅",
+    desc:   "Registro y publicación del horario por sección.",
+    href:   "/dashboard/horario",
+    roles:  ["COORDINACION_ACADEMICA"],
+  },
+  {
+    nombre: "Calendario Escolar",
+    icono:  "🗓️",
+    desc:   "Consulta del calendario escolar.",
+    href:   "/dashboard/calendario",
+    roles:  ["COORDINACION_ACADEMICA"],
+  },
+  {
+    nombre: "Asistencia",
+    icono:  "✅",
+    desc:   "Supervisión del pase de lista diario.",
+    href:   "/dashboard/asistencia",
+    roles:  ["COORDINACION_ACADEMICA"],
+  },
+  {
     nombre: "Matrícula",
     icono:  "🎓",
     desc:   "Administración de matrícula estudiantil.",
@@ -272,6 +293,20 @@ const MODULOS = [
 
   // ── ORIENTADOR ESCOLAR ─────────────────────────────────
   {
+    nombre: "Horario Escolar",
+    icono:  "📅",
+    desc:   "Consulta de horarios por sección.",
+    href:   "/dashboard/horario",
+    roles:  ["SECRETARIA_DOCENTE"],
+  },
+  {
+    nombre: "Calendario Escolar",
+    icono:  "🗓️",
+    desc:   "Consulta del calendario escolar.",
+    href:   "/dashboard/calendario",
+    roles:  ["SECRETARIA_DOCENTE"],
+  },
+  {
     nombre: "Orientación Escolar",
     icono:  "🧭",
     desc:   "Consulta de calificaciones y publicaciones de orientación.",
@@ -289,6 +324,34 @@ const MODULOS = [
   },
 
   // ── TUTOR ──────────────────────────────────────────────
+  {
+    nombre: "Asistencia",
+    icono:  "✅",
+    desc:   "Pase de lista diario de mis secciones.",
+    href:   "/dashboard/asistencia",
+    roles:  ["MAESTRO"],
+  },
+  {
+    nombre: "Calificaciones",
+    icono:  "📝",
+    desc:   "Registro de calificaciones de mis estudiantes.",
+    href:   "/dashboard/calificaciones",
+    roles:  ["MAESTRO"],
+  },
+  {
+    nombre: "Horario",
+    icono:  "📅",
+    desc:   "Mi horario de clases.",
+    href:   "/dashboard/horario",
+    roles:  ["MAESTRO"],
+  },
+  {
+    nombre: "Comunicados",
+    icono:  "📣",
+    desc:   "Circulares y comunicados institucionales.",
+    href:   "/dashboard/comunicaciones",
+    roles:  ["MAESTRO"],
+  },
   {
   nombre: "Estado de Cuenta",
   icono: "📄",
@@ -320,6 +383,13 @@ const MODULOS = [
 
   // ── ESTUDIANTE ─────────────────────────────────────────
   {
+    nombre: "Comunicados",
+    icono:  "📣",
+    desc:   "Circulares y comunicados del colegio.",
+    href:   "/dashboard/comunicaciones",
+    roles:  ["TUTOR"],
+  },
+  {
     nombre: "Mi Rendimiento",
     icono:  "📊",
     desc:   "Mis calificaciones y horario.",
@@ -349,6 +419,20 @@ const MODULOS = [
   },
 
   // ── TODOS LOS ROLES INTERNOS ───────────────────────────
+  {
+    nombre: "Comunicados",
+    icono:  "📣",
+    desc:   "Circulares y comunicados del colegio.",
+    href:   "/dashboard/comunicaciones",
+    roles:  ["ESTUDIANTE"],
+  },
+  {
+    nombre: "Inventario de Uniformes",
+    icono:  "👕",
+    desc:   "Control de stock y ventas de uniformes.",
+    href:   "/dashboard/inventario",
+    roles:  ["ADMINISTRADOR", "CAJERO"],
+  },
   {
     nombre: "Mi Perfil",
     icono:  "👤",
@@ -426,21 +510,21 @@ export default function DashboardPage() {
 const styles: Record<string, React.CSSProperties> = {
   loading:      { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
   main:         { minHeight: "100vh", background: "#f0f4f8", fontFamily: "Arial, sans-serif" },
-  nav:          { background: "linear-gradient(135deg, #1F5C99, #5D2F7D)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" },
+  nav:          { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" },
   navTitle:     { fontWeight: "bold", fontSize: "16px" },
   navRight:     { display: "flex", alignItems: "center", gap: "16px" },
   navUser:      { fontSize: "14px" },
   btnLogout:    { background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", borderRadius: "6px", padding: "6px 14px", fontSize: "13px", cursor: "pointer" },
   contenido:    { maxWidth: "1000px", margin: "0 auto", padding: "32px 20px" },
   bienvenida:   { background: "#fff", borderRadius: "12px", padding: "28px", marginBottom: "28px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
-  saludo:       { fontSize: "22px", color: "#1F5C99", margin: "0 0 10px" },
-  badge:        { display: "inline-block", background: "linear-gradient(135deg,#1F5C99,#5D2F7D)", color: "#fff", borderRadius: "20px", padding: "4px 16px", fontSize: "13px", fontWeight: "bold", marginBottom: "12px" },
+  saludo:       { fontSize: "22px", color: "#2C1810", margin: "0 0 10px" },
+  badge:        { display: "inline-block", background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", borderRadius: "20px", padding: "4px 16px", fontSize: "13px", fontWeight: "bold", marginBottom: "12px" },
   info:         { color: "#555", fontSize: "14px", margin: 0 },
   seccion:      { fontSize: "16px", color: "#333", marginBottom: "14px", fontWeight: "bold" },
   grid:         { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: "16px", marginBottom: "28px" },
-  tarjeta:      { background: "#fff", borderRadius: "10px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", cursor: "pointer", borderTop: "3px solid #1F5C99", transition: "transform 0.15s" },
+  tarjeta:      { background: "#fff", borderRadius: "10px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", cursor: "pointer", borderTop: "3px solid #C0392B", transition: "transform 0.15s" },
   tarjetaIcon:  { fontSize: "28px", marginBottom: "8px" },
-  tarjetaNombre:{ fontSize: "14px", fontWeight: "bold", color: "#1F5C99", margin: "0 0 6px" },
+  tarjetaNombre:{ fontSize: "14px", fontWeight: "bold", color: "#2C1810", margin: "0 0 6px" },
   tarjetaDesc:  { fontSize: "12px", color: "#666", margin: 0 },
   sesionInfo:   { background: "#fff", borderRadius: "10px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", fontSize: "13px", color: "#444", display: "flex", gap: "24px", flexWrap: "wrap" },
 };

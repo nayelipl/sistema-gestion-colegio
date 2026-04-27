@@ -135,7 +135,7 @@ const styles: Record<string, React.CSSProperties> = {
   main: {
     minHeight: "100vh", display: "flex", alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #1F5C99 0%, #5D2F7D 100%)",
+    background: "linear-gradient(135deg, #2C1810 0%, #4a2518 100%)",
     fontFamily: "Arial, sans-serif", padding: "20px",
   },
   card: {
@@ -145,7 +145,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   header:    { textAlign: "center", marginBottom: "24px" },
   icon:      { fontSize: "36px", marginBottom: "8px" },
-  titulo:    { fontSize: "20px", fontWeight: "bold", color: "#1F5C99", margin: "0 0 4px" },
+  titulo:    { fontSize: "20px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
   subtitulo: { fontSize: "12px", color: "#888", margin: 0 },
   form:      { display: "flex", flexDirection: "column", gap: "14px" },
   grupo:     { display: "flex", flexDirection: "column", gap: "5px" },
@@ -161,7 +161,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   boton: {
     marginTop: "6px", padding: "12px",
-    background: "linear-gradient(135deg, #1F5C99, #5D2F7D)",
+    background: "linear-gradient(135deg, #2C1810, #4a2518)",
     color: "#fff", border: "none", borderRadius: "8px",
     fontSize: "15px", fontWeight: "bold", cursor: "pointer",
   },
@@ -181,5 +181,5 @@ const styles: Record<string, React.CSSProperties> = {
   },
   avisoTexto: { fontSize: "12px", color: "#744210", margin: 0 },
   pie:    { textAlign: "center", marginTop: "16px", fontSize: "13px", color: "#666" },
-  enlace: { color: "#1F5C99", fontWeight: "600", textDecoration: "none" },
+  enlace: { color: "#2C1810", fontWeight: "600", textDecoration: "none" },
 };

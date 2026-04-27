@@ -13,7 +13,7 @@ export async function GET() {
       where: { activo: true },
       include: {
         calificaciones: {
-          where:   { estado: "PUBLICADA" },
+          where:   { publicado: true },
           include: { asignatura: { select: { nombre: true, codigo: true } } },
           orderBy: { creadoEn: "desc" },
         },

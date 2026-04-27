@@ -28,10 +28,6 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      rutas: {
-        include: { ruta: true },
-        where: { activo: true },
-      },
     },
     orderBy: { fechaInicio: "desc" },
   });

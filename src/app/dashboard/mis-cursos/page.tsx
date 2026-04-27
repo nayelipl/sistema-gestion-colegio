@@ -11,7 +11,7 @@ type Asignacion  = {
   asignatura: { id: number; nombre: string; codigo: string };
 };
 type Calificacion = {
-  id: number; periodo: string; nota: number; estado: string;
+  id: number; periodo: string; notaFinal: number; condicion: string; publicado: boolean;
   estudiante: { nombre: string; apellido: string; codigo: string };
   asignatura: { nombre: string };
 };
@@ -213,7 +213,7 @@ export default function MisCursosPage() {
                                   onClick={() => setRegistros({ ...registros, [e.id]: est })}
                                   style={{
                                     padding: "6px 10px", fontSize: "14px", cursor: "pointer",
-                                    border: `2px solid ${registros[e.id] === est ? "#1F5C99" : "#ddd"}`,
+                                    border: `2px solid ${registros[e.id] === est ? "#2C1810" : "#ddd"}`,
                                     borderRadius: "6px",
                                     background: registros[e.id] === est ? "#EBF3FB" : "#fff",
                                   }}>
@@ -263,8 +263,8 @@ export default function MisCursosPage() {
                         <td style={s.td}>{cal.estudiante.nombre} {cal.estudiante.apellido}</td>
                         <td style={s.td}>{cal.asignatura.nombre}</td>
                         <td style={s.td}><span style={s.periodoBadge}>{cal.periodo}</span></td>
-                        <td style={s.td}><span style={cal.nota >= 70 ? s.aprobado : s.reprobado}>{cal.nota}</span></td>
-                        <td style={s.td}><span style={cal.estado === "PUBLICADA" ? s.aprobado : s.pendiente}>{cal.estado}</span></td>
+                        <td style={s.td}><span style={cal.notaFinal >= 70 ? s.aprobado : s.reprobado}>{cal.notaFinal}</span></td>
+                        <td style={s.td}><span style={cal.publicado === true ? s.aprobado : s.pendiente}>{cal.publicado ? "PUBLICADO" : "PENDIENTE"}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -311,7 +311,7 @@ export default function MisCursosPage() {
                 </div>
                 <div>
                   <label style={s.label}>Nota * (0-100)</label>
-                  <input type="number" name="nota" value={form.nota || ""} onChange={c}
+                  <input type="number" name="nota" value={form.notaFinal || ""} onChange={c}
                     style={s.input} required min="0" max="100" />
                 </div>
               </div>
@@ -331,37 +331,37 @@ export default function MisCursosPage() {
 const s: Record<string, React.CSSProperties> = {
   loading:      { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
   sinAcceso:    { minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" },
-  enlace:       { color: "#1F5C99", fontWeight: "bold" },
+  enlace:       { color: "#2C1810", fontWeight: "bold" },
   main:         { minHeight: "100vh", background: "#f0f4f8", fontFamily: "Arial, sans-serif" },
-  nav:          { background: "linear-gradient(135deg, #1F5C99, #5D2F7D)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  nav:          { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" },
   navBack:      { color: "#fff", textDecoration: "none", fontSize: "14px" },
   navTitle:     { fontWeight: "bold", fontSize: "16px" },
   navUser:      { fontSize: "14px" },
   contenido:    { maxWidth: "1100px", margin: "0 auto", padding: "28px 20px" },
   header:       { marginBottom: "20px" },
-  titulo:       { fontSize: "22px", fontWeight: "bold", color: "#1F5C99", margin: "0 0 4px" },
+  titulo:       { fontSize: "22px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
   subtitulo:    { fontSize: "13px", color: "#666", margin: 0 },
   resumenGrid:  { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px", marginBottom: "20px" },
   resumenCard:  { background: "#fff", borderRadius: "10px", padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", borderTop: "3px solid #1F5C99" },
-  resumenLabel: { fontSize: "12px", fontWeight: "bold", color: "#1F5C99", margin: "0 0 4px" },
+  resumenLabel: { fontSize: "12px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
   resumenValor: { fontSize: "13px", color: "#333", margin: "0 0 2px", fontWeight: "600" },
   tabs:         { display: "flex", gap: "8px", marginBottom: "20px" },
   tab:          { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666" },
-  tabActivo:    { borderColor: "#1F5C99", color: "#1F5C99", background: "#EBF3FB" },
+  tabActivo:    { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
   card:         { background: "#fff", borderRadius: "12px", padding: "28px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
   exitoMsg:     { background: "#f0fff4", border: "1px solid #9ae6b4", color: "#276749", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", fontSize: "13px" },
   errorMsg:     { color: "#e53e3e", fontSize: "13px", background: "#fff5f5", border: "1px solid #fed7d7", borderRadius: "6px", padding: "8px 12px", marginBottom: "12px" },
   vacio:        { textAlign: "center", padding: "40px", color: "#888" },
   tablaWrap:    { overflowX: "auto" as any },
   tabla:        { width: "100%", borderCollapse: "collapse" as any },
-  thead:        { background: "linear-gradient(135deg,#1F5C99,#5D2F7D)" },
+  thead:        { background: "linear-gradient(135deg,#2C1810,#4a2518)" },
   th:           { padding: "12px 14px", color: "#fff", fontSize: "12px", fontWeight: "bold", textAlign: "left" as any },
   td:           { padding: "10px 14px", fontSize: "13px", borderBottom: "1px solid #f0f0f0" },
   codigo:       { background: "#f0f4f8", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontFamily: "monospace" },
   badgePresente:{ background: "#c6f6d5", color: "#276749", borderRadius: "12px", padding: "4px 12px", fontSize: "12px", fontWeight: "bold" },
   badgeAusente: { background: "#fed7d7", color: "#c53030", borderRadius: "12px", padding: "4px 12px", fontSize: "12px", fontWeight: "bold" },
   badgeTardanza:{ background: "#fefcbf", color: "#744210", borderRadius: "12px", padding: "4px 12px", fontSize: "12px", fontWeight: "bold" },
-  periodoBadge: { background: "#EBF3FB", color: "#1F5C99", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
+  periodoBadge: { background: "#EBF3FB", color: "#2C1810", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
   aprobado:     { background: "#c6f6d5", color: "#276749", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
   reprobado:    { background: "#fed7d7", color: "#c53030", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
   pendiente:    { background: "#fefcbf", color: "#744210", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
@@ -369,9 +369,9 @@ const s: Record<string, React.CSSProperties> = {
   input:        { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", boxSizing: "border-box" as any },
   overlay:      { position: "fixed" as any, inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
   modalCard:    { background: "#fff", borderRadius: "16px", padding: "32px", width: "100%", maxWidth: "500px" },
-  modalTitulo:  { fontSize: "18px", fontWeight: "bold", color: "#1F5C99", margin: "0 0 20px" },
+  modalTitulo:  { fontSize: "18px", fontWeight: "bold", color: "#2C1810", margin: "0 0 20px" },
   formGrid:     { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" },
   modalBotones: { display: "flex", gap: "10px", justifyContent: "flex-end" },
   btnCancelar:  { background: "#f0f0f0", color: "#333", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", cursor: "pointer" },
-  btnGuardar:   { background: "linear-gradient(135deg,#1F5C99,#5D2F7D)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
+  btnGuardar:   { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
 };

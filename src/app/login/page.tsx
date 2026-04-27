@@ -103,7 +103,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #1F5C99 0%, #5D2F7D 100%)",
+    background: "linear-gradient(135deg, #2C1810 0%, #4a2518 100%)",
     fontFamily: "Arial, sans-serif",
   },
   card: {
@@ -125,7 +125,7 @@ const styles: Record<string, React.CSSProperties> = {
   titulo: {
     fontSize: "18px",
     fontWeight: "bold",
-    color: "#1F5C99",
+    color: "#2C1810",
     margin: "0 0 6px",
   },
   subtitulo: {
@@ -159,7 +159,7 @@ const styles: Record<string, React.CSSProperties> = {
   boton: {
     marginTop: "8px",
     padding: "12px",
-    background: "linear-gradient(135deg, #1F5C99, #5D2F7D)",
+    background: "linear-gradient(135deg, #2C1810, #4a2518)",
     color: "#fff",
     border: "none",
     borderRadius: "8px",
@@ -184,7 +184,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#666",
   },
   enlace: {
-    color: "#1F5C99",
+    color: "#2C1810",
     fontWeight: "600",
     textDecoration: "none",
   },

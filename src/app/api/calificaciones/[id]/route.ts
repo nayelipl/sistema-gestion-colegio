@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { estado } = await req.json();
+    const { id } = await params;
+    const { publicado, publicadoPor } = await req.json();
     const calificacion = await prisma.calificacion.update({
-      where: { id: parseInt(params.id) },
-      data:  { estado },
+      where: { id: parseInt(id) },
+      data:  { publicado, publicadoPor: publicadoPor || null },
     });
     return NextResponse.json({ mensaje: "Calificación actualizada.", calificacion });
   } catch (error) {

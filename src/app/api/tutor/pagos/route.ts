@@ -8,12 +8,14 @@ export async function GET() {
     if (!session?.user?.email) {
       return NextResponse.json({ error: "No autenticado." }, { status: 401 });
     }
-    const tutor = await prisma.tutor.findUnique({
-      where: { email: session.user.email },
-      include: { pagos: { orderBy: { creadoEn: "desc" } } },
-    });
+    const tutor = await prisma.tutor.findUnique({ where: { email: session.user.email } });
     if (!tutor) return NextResponse.json({ pagos: [] });
-    return NextResponse.json({ pagos: tutor.pagos });
+
+    const pagos = await prisma.reciboPago.findMany({
+      where:   { tutorId: tutor.id },
+      orderBy: { creadoEn: "desc" },
+    });
+    return NextResponse.json({ pagos });
   } catch (error) {
     return NextResponse.json({ error: "Error al obtener pagos." }, { status: 500 });
   }
@@ -25,21 +27,31 @@ export async function POST(req: NextRequest) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: "No autenticado." }, { status: 401 });
     }
-    const { concepto, monto } = await req.json();
-    if (!concepto || !monto) {
-      return NextResponse.json({ error: "Concepto y monto son obligatorios." }, { status: 400 });
+    const { monto, metodoPago } = await req.json();
+    if (!monto || !metodoPago) {
+      return NextResponse.json({ error: "Monto y método de pago son obligatorios." }, { status: 400 });
     }
     const tutor = await prisma.tutor.findUnique({ where: { email: session.user.email } });
     if (!tutor) return NextResponse.json({ error: "Tutor no encontrado." }, { status: 404 });
 
-    const pago = await prisma.pago.create({
+    const contador = await prisma.contador.upsert({
+      where:  { id: "RP" },
+      update: { ultimoNumero: { increment: 1 } },
+      create: { id: "RP", ultimoNumero: 1 },
+    });
+    const reciboNo = `RP-${String(contador.ultimoNumero).padStart(5, "0")}`;
+    const hora     = new Date().toLocaleTimeString("es-DO", { hour12: false });
+    const montoNum = parseFloat(monto);
+
+    const pago = await prisma.reciboPago.create({
       data: {
+        reciboNo,
         tutorId:     tutor.id,
-        concepto,
-        monto:       parseFloat(monto),
-        montoPagado: parseFloat(monto),
-        cambio:      0,
-        tipo:        "ONLINE",
+        subTotal:    montoNum,
+        total:       montoNum,
+        hora,
+        metodoPago,
+        realizadoPor: session.user.email,
       },
     });
     return NextResponse.json({ mensaje: "Pago realizado exitosamente.", pago }, { status: 201 });

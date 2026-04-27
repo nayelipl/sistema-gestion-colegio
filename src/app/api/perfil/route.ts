@@ -1,38 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 
-export async function PUT(req: NextRequest) {
+export async function GET() {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "No autenticado." }, { status: 401 });
     }
 
-    const { nombre, contrasenaActual, contrasenaNueva } = await req.json();
+    const rol   = (session.user as any).role;
+    const email = session.user.email;
+    let perfil: any = null;
 
-    const usuario = await prisma.usuario.findUnique({
-      where: { email: session.user.email },
+    if (rol === "TUTOR") {
+      perfil = await prisma.tutor.findUnique({
+        where:  { email },
+        select: { nombre: true, apellido: true, celular: true, direccion: true,
+          numeroDocIdentidad: true, cuentaNo: true, creadoEn: true },
+      });
+    } else if (rol === "ESTUDIANTE") {
+      perfil = await prisma.estudiante.findFirst({
+        where:  { codigo: email },
+        select: { nombre: true, apellido: true, codigo: true, fechaNac: true, creadoEn: true,
+          seccion: { select: { aula: true, curso: { select: { grado: true } } } } },
+      });
+    } else {
+      perfil = await prisma.empleado.findUnique({
+        where:  { email },
+        select: { nombre: true, apellido: true, telefono: true, cedula: true, salario: true, creadoEn: true },
+      });
+    }
+
+    return NextResponse.json({ perfil });
+  } catch (error) {
+    return NextResponse.json({ error: "Error al obtener perfil." }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+    }
+
+    const rol   = (session.user as any).role;
+    const email = session.user.email;
+    const { nombre, apellido, telefono, direccion } = await req.json();
+
+    if (rol === "TUTOR") {
+      await prisma.tutor.update({
+        where: { email },
+        data:  { nombre, apellido, celular: telefono, direccion },
+      });
+    } else if (rol === "ESTUDIANTE") {
+      await prisma.estudiante.updateMany({
+        where: { codigo: email },
+        data:  { nombre, apellido },
+      });
+    } else {
+      await prisma.empleado.update({
+        where: { email },
+        data:  { nombre, apellido, telefono },
+      });
+    }
+
+    await prisma.usuario.update({
+      where: { email },
+      data:  { nombre: `${nombre} ${apellido}` },
     });
-    if (!usuario) return NextResponse.json({ error: "Usuario no encontrado." }, { status: 404 });
 
-    if (contrasenaNueva) {
-      if (!contrasenaActual) {
-        return NextResponse.json({ error: "Debes ingresar tu contraseña actual." }, { status: 400 });
-      }
-      const valida = await bcrypt.compare(contrasenaActual, usuario.contrasena);
-      if (!valida) {
-        return NextResponse.json({ error: "La contraseña actual es incorrecta." }, { status: 400 });
-      }
-    }
-
-    const data: any = { nombre };
-    if (contrasenaNueva) {
-      data.contrasena = await bcrypt.hash(contrasenaNueva, 10);
-    }
-
-    await prisma.usuario.update({ where: { email: session.user.email }, data });
     return NextResponse.json({ mensaje: "Perfil actualizado exitosamente." });
   } catch (error) {
     return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });

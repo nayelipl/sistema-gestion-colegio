@@ -9,31 +9,27 @@ export async function POST() {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Verificar que existen tarifas configuradas para el nuevo año
     const tarifaActiva = await prisma.tarifaAnioEscolar.findFirst({
       where: { activo: true },
-      include: { tarifasCurso: true }
+      include: { tarifasCurso: true },
     });
 
     if (!tarifaActiva) {
-      return NextResponse.json({ 
-        error: "No hay tarifas configuradas para el nuevo año escolar. Configure las tarifas primero." 
+      return NextResponse.json({
+        error: "No hay tarifas configuradas para el nuevo año escolar. Configure las tarifas primero."
       }, { status: 400 });
     }
 
-    // Archivar calificaciones del año actual
+    // Despublicar calificaciones del año actual
     await prisma.calificacion.updateMany({
-      where:  { estado: "PUBLICADA" },
-      data:   { estado: "ARCHIVADA" },
+      where: { publicado: true },
+      data:  { publicado: false },
     });
 
     // Remover secciones de estudiantes para nuevo año escolar
     await prisma.estudiante.updateMany({
       data: { seccionId: null },
     });
-
-    // Aquí puedes agregar más acciones: ierre de cuentas por cobrar, crear secciones,
-    // generar nuevas facturas con las nuevas tarifas, etc.
 
     return NextResponse.json({
       mensaje: "Año escolar reiniciado exitosamente. Las calificaciones fueron archivadas y los estudiantes están listos para ser matriculados en el nuevo ciclo.",

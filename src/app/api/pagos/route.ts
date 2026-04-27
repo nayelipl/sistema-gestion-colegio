@@ -16,12 +16,11 @@ export async function GET(req: NextRequest) {
       where.creadoEn = { gte: inicio, lt: fin };
     }
 
-    const pagos = await prisma.pago.findMany({
+    const pagos = await prisma.reciboPago.findMany({
       where,
-      include: { tutor: { select: { nombre: true, apellido: true, codigo: true } } },
+      include: { tutor: { select: { nombre: true, apellido: true, cuentaNo: true } } },
       orderBy: { creadoEn: "desc" },
     });
-
     return NextResponse.json({ pagos });
   } catch (error) {
     return NextResponse.json({ error: "Error al obtener pagos." }, { status: 500 });
@@ -30,40 +29,35 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { tutorId, concepto, monto, montoPagado } = await req.json();
-
-    if (!tutorId || !concepto || !monto || !montoPagado) {
+    const { tutorId, monto, metodoPago } = await req.json();
+    if (!tutorId || !monto || !metodoPago) {
       return NextResponse.json({ error: "Todos los campos son obligatorios." }, { status: 400 });
     }
 
-    const montoNum      = parseFloat(monto);
-    const montoPagadoNum = parseFloat(montoPagado);
+    const contador = await prisma.contador.upsert({
+      where:  { id: "RP" },
+      update: { ultimoNumero: { increment: 1 } },
+      create: { id: "RP", ultimoNumero: 1 },
+    });
+    const reciboNo = `RP-${String(contador.ultimoNumero).padStart(5, "0")}`;
+    const hora     = new Date().toLocaleTimeString("es-DO", { hour12: false });
+    const montoNum = parseFloat(monto);
 
-    if (montoPagadoNum < montoNum) {
-      return NextResponse.json({ error: "El monto pagado no puede ser menor al monto a cobrar." }, { status: 400 });
-    }
-
-    const cambio = montoPagadoNum - montoNum;
-
-    const pago = await prisma.pago.create({
+    const pago = await prisma.reciboPago.create({
       data: {
-        tutorId:    parseInt(tutorId),
-        concepto,
-        monto:      montoNum,
-        montoPagado: montoPagadoNum,
-        cambio,
-        tipo:       "PRESENCIAL",
+        reciboNo,
+        tutorId:     parseInt(tutorId),
+        subTotal:    montoNum,
+        total:       montoNum,
+        hora,
+        metodoPago,
+        realizadoPor: "SISTEMA",
       },
-      include: { tutor: { select: { nombre: true, apellido: true, codigo: true } } },
+      include: { tutor: { select: { nombre: true, apellido: true, cuentaNo: true } } },
     });
 
-    return NextResponse.json({
-      mensaje: "Pago registrado exitosamente.",
-      pago,
-      cambio,
-    }, { status: 201 });
+    return NextResponse.json({ mensaje: "Pago registrado exitosamente.", pago }, { status: 201 });
   } catch (error) {
-    console.error(error);
     return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });
   }
 }
