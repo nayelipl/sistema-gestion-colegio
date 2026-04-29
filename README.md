@@ -29,14 +29,14 @@ Esta plataforma web está diseñada para ser fácil de navegar, cada usuario pod
             login/ → Página de inicio de sesión<br>
             portal/ → Página pública del colegio<br>
 📁 src/lib → Utilidades compartidas<br>
-📄 .gitignore
+📄 .gitignore<br>
 📄 eslint.config.mjs<br>
 📄 next-env.d.ts<br>
 📄 next.config.ts<br>
 📄 package-lock.json → Versiones de los paquetes del proyecto<br>
 📄 package.json → Dependencias y scripts<br>
 📄 postcss.config.mjs<br>
-📄 README.md
+📄 README.md<br>
 📄 tsconfig.json → Configuración de TypeScript
 
 
@@ -76,7 +76,7 @@ Crea un archivo .env.local en la raíz del proyecto:
 NEXTAUTH_SECRET="tu-secreto-aqui"
 NEXTAUTH_URL="http://localhost:3000"
 
-DATABASE_URL="mysql://root:contraseña@localhost:3306/BD-sistema-gestion-colegio"
+DATABASE_URL="mysql://root:contraseña@localhost:3306/nombre_bd"
 ```
 
 ### 4. Ejecutar migraciones de base de datos
