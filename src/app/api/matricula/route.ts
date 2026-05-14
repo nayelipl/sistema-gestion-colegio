@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { obtenerSiguienteInscripcionNo, obtenerSiguienteNumero } from "@/lib/contador-secuencial";
 import { TipoMovimiento, EstadoCuenta, EstadoCargo } from "@prisma/client";
+import { formatFechaLocal } from "@/lib/formatear-fecha";
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +33,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El estudiante no tiene un tutor asignado" }, { status: 400 });
     }
 
-    // 2. Validar si ya está matriculado
+    // 2. Validar que el estudiante no tenga cargos pendientes del año escolar pasado
+    const ultimaMatriculaTutor = await prisma.matricula.findFirst({
+      where: { 
+        estudiante: {
+          tutorId: estudiante.tutorId
+        }
+      },
+      orderBy: { creadoEn: "desc" },
+      select: { anioEscolar: true }
+    });
+
+    const ultimoAnioEscolar = ultimaMatriculaTutor?.anioEscolar;
+
+    // Si el tutor ya tiene matrículas y está intentando matricular en un año diferente
+    if (ultimoAnioEscolar && ultimoAnioEscolar !== anioEscolar) {
+      const ultimoMovimientoTutor = await prisma.movimientoContable.findFirst({
+        where: { tutorId: estudiante.tutorId },
+        orderBy: { id: "desc" },
+      });
+
+      const balanceActual = ultimoMovimientoTutor?.balance?.toNumber() || 0;
+
+      if (balanceActual !== 0) {
+        return NextResponse.json({ 
+          error: `El tutor ${estudiante.tutor?.cuentaNo} - ${estudiante.tutor?.nombre} ${estudiante.tutor?.apellido} tiene un saldo pendiente de RD$${balanceActual.toFixed(2)} del año escolar ${ultimoAnioEscolar}. Debe regularizar su cuenta antes de matricular en el nuevo año escolar ${anioEscolar}.` 
+        }, { status: 400 });
+      }
+    }
+
+    // 3. Validar si ya está matriculado
     const matriculaExistente = await prisma.matricula.findFirst({
       where: { estudianteId, anioEscolar },
     });
@@ -41,7 +71,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El estudiante ya está matriculado en este año escolar" }, { status: 400 });
     }
 
-    // 3. Obtener tarifa activa
+    // 4. Obtener tarifa activa
     const tarifaActiva = await prisma.tarifaAnioEscolar.findFirst({
       where: { anioEscolar, activo: true },
       include: {
@@ -63,7 +93,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // 4. Obtener sección y curso
+    // 5. Obtener sección y curso
     const seccion = await prisma.seccion.findUnique({
       where: { id: seccionId },
       include: { curso: true },
@@ -73,7 +103,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Sección o curso no encontrado" }, { status: 404 });
     }
 
-    // 5. Obtener tarifa del curso
+    // 6. Obtener tarifa del curso
     const tarifaCurso = tarifaActiva.tarifasCurso.find(tc => tc.cursoId === seccion.cursoId);
 
     if (!tarifaCurso) {
@@ -82,13 +112,13 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // 6. Generar números secuenciales
+    // 7. Generar números secuenciales
     const inscripcionNo = await obtenerSiguienteInscripcionNo();
     const docInsc = await obtenerSiguienteNumero("FA-INSC");
     const docRecibo = await obtenerSiguienteNumero("RI");
     const docColeFactura = await obtenerSiguienteNumero("FA-COLE");
 
-    const horaActual = new Date().toLocaleTimeString("es-DO", { hour12: false });
+    const horaActual = formatFechaLocal(new Date());
     const valorInscripcion = Number(tarifaActiva.valorInscripcion);
     const valorCuotaMensual = Number(tarifaCurso.cuotaColegiatura);
     const valorCobradoNum = Number(valorCobrado) || 0;
@@ -96,7 +126,7 @@ export async function POST(req: NextRequest) {
     // Calcular total de colegiatura (suma de todas las cuotas)
     const totalColegiatura = valorCuotaMensual * tarifaActiva.colegiaturaNumCuotas;
 
-    // 7. Crear la matrícula
+    // 8. Crear la matrícula
     const matricula = await prisma.matricula.create({
       data: {
         inscripcionNo,
@@ -109,11 +139,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    let balance = 0;
-
-    // 8. Cargo por matriculación
-    const fechaVencimientoInscripcion = new Date();
-    fechaVencimientoInscripcion.setDate(fechaVencimientoInscripcion.getDate() + 30);
+    // Obtener el último balance del tutor, de todos sus representados
+    const ultimoMovimientoTutor = await prisma.movimientoContable.findFirst({
+      where: { tutorId: estudiante.tutorId },
+      orderBy: { id: "desc" },
+    });
+    let balance = ultimoMovimientoTutor?.balance?.toNumber() || 0;
+    
+    // 9. Cargo por matriculación
+    // Vencimiento de la inscripcion es el 25 de septiembre del año escolar
+    const anioInicio = parseInt(anioEscolar.split('-')[0]); // Si es "2025-2026" entonces sería 2025
+    const fechaVencimientoInscripcion = new Date(anioInicio, 8, 25);
+    fechaVencimientoInscripcion.setHours(0, 0, 0, 0);
 
     const cargoInscripcion = await prisma.cargo.create({
       data: {
@@ -127,7 +164,7 @@ export async function POST(req: NextRequest) {
         fechaVencimiento: fechaVencimientoInscripcion,
         montoPagado: Math.min(valorCobradoNum, valorInscripcion),
         saldoPendiente: Math.max(0, valorInscripcion - valorCobradoNum),
-        estado: valorCobradoNum >= valorInscripcion ? EstadoCargo.SALDA : EstadoCargo.ABONADA,
+        estado: valorCobradoNum >= valorInscripcion ? EstadoCargo.SALDO : EstadoCargo.ABONADO,
         anioEscolar,
       },
     });
@@ -214,7 +251,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 9. Facturación consolidada de colegiatura
+    // 10. Facturación consolidada de colegiatura
     // Crear los cargos individuales para cada cuota
     const cargosCreados = [];
     
@@ -279,7 +316,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 10. Actualizar la sección del estudiante
+    // 11. Actualizar la sección del estudiante
     await prisma.estudiante.update({
       where: { id: estudianteId },
       data: { seccionId },
@@ -289,11 +326,6 @@ export async function POST(req: NextRequest) {
       where: { id: seccionId },
       data: { inscritos: { increment: 1 } },
     });
-
-    console.log("✅ Matrícula completada exitosamente");
-    console.log(`   Total colegiatura facturada: RD$${totalColegiatura}`);
-    console.log(`   Cuotas generadas: ${cargosCreados.length}`);
-    console.log(`   Transporte: Debe registrarse por separado en el módulo de transporte`);
 
     return NextResponse.json({
       mensaje: "Matriculación completada exitosamente",

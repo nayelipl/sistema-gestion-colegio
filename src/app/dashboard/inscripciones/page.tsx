@@ -203,7 +203,7 @@ export default function InscripcionesPage() {
                       </div>
                       
                       <Campo label="Número de documento *" name="numeroDocIdentidad" value={form.numeroDocIdentidad} onChange={c} required />
-                      <Campo label="Ocupación" name="ocupacion" value={form.ocupacion} onChange={c} />
+                      <Campo label="Ocupación *" name="ocupacion" value={form.ocupacion} onChange={c} />
                     </div>
                   </div>
 
@@ -220,7 +220,7 @@ export default function InscripcionesPage() {
                   <div style={s.seccionFormulario}>
                     <h3 style={s.seccionTitulo}>🆘 Contacto de Emergencia</h3>
                     <div style={s.grid}>
-                      <Campo label="Nombre de contacto alterno" name="nombreContactoAlterno" value={form.nombreContactoAlterno} onChange={c} />
+                      <Campo label="Nombre de contacto alterno *" name="nombreContactoAlterno" value={form.nombreContactoAlterno} onChange={c} />
                       <Campo label="Teléfono de contacto alterno" name="telefonoContactoAlterno" value={form.telefonoContactoAlterno} onChange={c} placeholder="809-000-0000" />
                     </div>
                   </div>
@@ -293,7 +293,7 @@ export default function InscripcionesPage() {
                       </div>
                       
                       <div>
-                        <label style={s.label}>Parentesco *</label>
+                        <label style={s.label}>Parentesco Tutor *</label>
                         <select name="parentesco" value={form.parentesco || ""} onChange={c} style={s.input} required>
                           <option value="">Seleccionar</option>
                           <option value="PADRE">Padre</option>

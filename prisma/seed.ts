@@ -21,6 +21,10 @@ async function main() {
   console.log("✅ Usuario administrador creado:");
   console.log("   Email:     admin@colegio.edu");
   console.log("   Contraseña: admin123");
+
+  await import('./seed_calendario')
+  await import('./seed_circulares')
+  await import('./seed_fix_circulares')
 }
 
 main()

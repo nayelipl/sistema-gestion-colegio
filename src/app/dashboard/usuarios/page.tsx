@@ -244,7 +244,7 @@ export default function UsuariosPage() {
                     {tab === "tutores" && <>
                       <td style={s.td}><code style={s.codigo}>{u.codigo}</code></td>
                       <td style={s.td}>{u.nombre} {u.apellido}</td>
-                      <td style={s.td}>{u.cedula}</td>
+                      <td style={s.td}>{u.cedula || "—"}</td>
                       <td style={s.td}>{u.email}</td>
                       <td style={s.td}>{u.telefono || "—"}</td>
                       <td style={s.td}>{u.estudiantes?.length ?? 0} representado(s)</td>
@@ -254,7 +254,6 @@ export default function UsuariosPage() {
                     {tab === "estudiantes" && <>
                       <td style={s.td}><code style={s.codigo}>{u.codigo}</code></td>
                       <td style={s.td}>{u.nombre} {u.apellido}</td>
-                      <td style={s.td}>{u.cedula || "—"}</td>
                       <td style={s.td}>{u.RNE || "—"}</td>
                       <td style={s.td}>{u.tutor ? `${u.tutor.nombre} ${u.tutor.apellido} (${u.tutor.codigo})` : "—"}</td>
                       <td style={s.td}><span style={u.activo ? s.activo : s.inactivo}>{u.activo ? "Activo" : "Inactivo"}</span></td>

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `recibos_pago` ADD COLUMN `origen` VARCHAR(191) NULL DEFAULT 'PRESENCIAL';

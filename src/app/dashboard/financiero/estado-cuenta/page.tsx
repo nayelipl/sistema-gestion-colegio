@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import AsyncSelect from "react-select/async";
 
 type Movimiento = {
   id: number;
@@ -24,18 +25,17 @@ export default function EstadoCuentaPage() {
   const rol = (session?.user as any)?.role ?? "";
 
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
-  const [tutor, setTutor] = useState<any>(null);
   const [resumen, setResumen] = useState({ totalDebito: 0, totalCredito: 0, balance: 0 });
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
-  const [tutores, setTutores] = useState<any[]>([]);
-  const [tutorSeleccionado, setTutorSeleccionado] = useState<string>("");
+  const [tutorSeleccionado, setTutorSeleccionado] = useState<any>(null);
+  const [tutorIdSeleccionado, setTutorIdSeleccionado] = useState<string>("");
   
   // Filtros
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("TODOS");
-
+  
   const ROLES_PERMITIDOS = ["ADMINISTRADOR", "CONTADOR", "CAJERO", "TUTOR"];
 
   useEffect(() => {
@@ -45,15 +45,41 @@ export default function EstadoCuentaPage() {
     }
   }, [status, rol]);
 
-  // Cargar lista de tutores (solo para admin/contador/cajero)
-  useEffect(() => {
-    if (rol !== "TUTOR") {
-      fetch("/api/usuarios/tutores")
-        .then(r => r.json())
-        .then(setTutores)
-        .catch(console.error);
+  const cargarTutores = async (inputValue: string) => {
+    if (!inputValue || inputValue.length < 2) return [];
+    
+    try {
+      const res = await fetch(`/api/usuarios/tutores/buscar?q=${encodeURIComponent(inputValue)}`);
+      const data = await res.json();
+      if (!res.ok) return [];
+      
+      return data.map((tutor: any) => ({
+        value: tutor.id,
+        label: `${tutor.cuentaNo} - ${tutor.nombre} ${tutor.apellido}`,
+        tutor: tutor,
+        sublabel: `${tutor.email || ""} | ${tutor.celular || ""}`
+      }));
+    } catch (error) {
+      console.error("Error cargando tutores:", error);
+      return [];
     }
-  }, [rol]);
+  };
+
+  const formatoOptionTutor = (data: any) => (
+    <div style={{ display: "flex", flexDirection: "column", padding: "4px 0" }}>
+      <span style={{ fontWeight: "bold", fontSize: "14px" }}>{data.label}</span>
+      <span style={{ fontSize: "11px", color: "#666" }}>{data.sublabel}</span>
+    </div>
+  );
+
+  // Para ADMIN/CONTADOR/CAJERO, se carga cuando seleccionan tutor Y hacen clic en Filtrar
+  const aplicarFiltros = () => {
+    if (rol !== "TUTOR" && !tutorIdSeleccionado) {
+      setError("Debe seleccionar un tutor");
+      return;
+    }
+    cargarEstadoCuenta(tutorIdSeleccionado || undefined);
+  };
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -63,12 +89,6 @@ export default function EstadoCuentaPage() {
       }
     }
   }, [status, rol]);
-
-  useEffect(() => {
-    if (tutorSeleccionado) {
-      cargarEstadoCuenta(tutorSeleccionado);
-    }
-  }, [tutorSeleccionado, fechaDesde, fechaHasta, tipoFiltro]);
 
   const cargarEstadoCuenta = async (tutorId?: string) => {
     setCargando(true);
@@ -86,13 +106,21 @@ export default function EstadoCuentaPage() {
       
       if (!res.ok) {
         setError(data.error);
+        setTutorSeleccionado(null);
+        setMovimientos([]);
       } else {
-        setTutor(data.tutor);
+        setTutorSeleccionado(data.tutor);
         setMovimientos(data.movimientos || []);
         setResumen(data.resumen || { totalDebito: 0, totalCredito: 0, balance: 0 });
+
+        if (data.mensaje && !tutorId) {
+          setError(data.mensaje);
+        }
       }
     } catch (error) {
       setError("Error al cargar el estado de cuenta");
+      setTutorSeleccionado(null);
+      setMovimientos([]);
     } finally {
       setCargando(false);
     }
@@ -102,12 +130,22 @@ export default function EstadoCuentaPage() {
     return new Date(fechaStr).toLocaleDateString("es-DO");
   };
 
+  const limpiarFiltros = () => {
+    setFechaDesde("");
+    setFechaHasta("");
+    setTipoFiltro("TODOS");
+    setTutorIdSeleccionado("");
+    setTutorSeleccionado(null);
+    setCargando(true);
+    setError("");
+  };
+
   const formatMonto = (monto: number | string | null | undefined) => {
     if (monto === null || monto === undefined) return "RD$0.00";
     const num = typeof monto === "number" ? monto : parseFloat(monto);
     if (isNaN(num)) return "RD$0.00";
     return `RD$${num.toFixed(2)}`;
-    };
+  };
 
   const getTipoBadge = (tipo: string) => {
     switch (tipo) {
@@ -143,31 +181,54 @@ export default function EstadoCuentaPage() {
             <div style={s.filtrosGrid}>
               <div>
                 <label style={s.label}>Seleccionar Tutor</label>
-                <select 
-                  value={tutorSeleccionado} 
-                  onChange={(e) => setTutorSeleccionado(e.target.value)} 
-                  style={s.input}
-                >
-                  <option value="">-- Seleccione un tutor --</option>
-                  {tutores.map((t: any) => (
-                    <option key={t.id} value={t.id}>
-                      {t.cuentaNo} - {t.nombre} {t.apellido}
-                    </option>
-                  ))}
-                </select>
+                <AsyncSelect
+                  cacheOptions
+                  loadOptions={cargarTutores}
+                  defaultOptions={false}
+                  onChange={(option: any) => {
+                    if (option) {
+                      setTutorIdSeleccionado(option.value);
+                      setTutorSeleccionado(option.tutor);
+                    } else {
+                      setTutorIdSeleccionado("");
+                      setTutorSeleccionado(null);
+                    }
+                  }}
+                  value={tutorSeleccionado ? {
+                    value: tutorSeleccionado.id,
+                    label: `${tutorSeleccionado.cuentaNo} - ${tutorSeleccionado.nombre} ${tutorSeleccionado.apellido}`,
+                  } : null}
+                  placeholder="Buscar por número de cuenta, nombre, apellido..."
+                  isClearable
+                  formatOptionLabel={formatoOptionTutor}
+                  noOptionsMessage={({ inputValue }) => 
+                    !inputValue || inputValue.length < 2 
+                      ? "Escribe al menos 2 caracteres para buscar..." 
+                      : "No se encontraron tutores"
+                  }
+                  loadingMessage={() => "Buscando tutores..."}
+                  styles={{
+                    control: (base) => ({ ...base, padding: "4px", borderRadius: "7px", borderColor: "#ddd", minHeight: "42px", width: "100%", boxSizing: "border-box" as const, backgroundColor: "#fff", cursor: "text" }),
+                    menu: (base) => ({ ...base, zIndex: 9999, width: "100%", minWidth: "250px" }),
+                    container: (base) => ({ ...base, width: "100%", minWidth: "250px" }),
+                    input: (base) => ({ ...base, width: "100%" }),
+                    valueContainer: (base) => ({ ...base, width: "100%", padding: "2px 8px" }),
+                    option: (base, state) => ({ ...base, backgroundColor: state.isFocused ? "#EBF3FB" : "#fff", color: "#333", cursor: "pointer", padding: "10px 12px" }),
+                  }}
+                />
               </div>
             </div>
           </div>
         )}
 
         {/* Información del Tutor */}
-        {tutor && (
+        {tutorSeleccionado && tutorSeleccionado.nombre && (
           <div style={s.tutorCard}>
             <div style={s.tutorGrid}>
-              <div><strong>Cuenta No.:</strong> {tutor.cuentaNo}</div>
-              <div><strong>Tutor:</strong> {tutor.nombre} {tutor.apellido}</div>
-              <div><strong>Dirección:</strong> {tutor.direccion || "—"}</div>
-              <div><strong>Celular:</strong> {tutor.celular || "—"}</div>
+              <div><strong>Cuenta No.:</strong> {tutorSeleccionado.cuentaNo}</div>
+              <div><strong>Tutor:</strong> {tutorSeleccionado.nombre} {tutorSeleccionado.apellido}</div>
+              <div><strong>Dirección:</strong> {tutorSeleccionado.direccion || "—"}</div>
+              <div><strong>Celular:</strong> {tutorSeleccionado.celular || "—"}</div>
             </div>
           </div>
         )}
@@ -193,7 +254,10 @@ export default function EstadoCuentaPage() {
               </select>
             </div>
             <div style={{ display: "flex", alignItems: "flex-end" }}>
-              <button onClick={() => cargarEstadoCuenta(tutorSeleccionado)} style={s.btnFiltrar}>🔍 Filtrar</button>
+              <button onClick={aplicarFiltros} style={s.btnFiltrar}>🔍 Filtrar</button>
+              <button onClick={limpiarFiltros} style={s.btnLimpiar}>
+                🧹 Limpiar filtros
+              </button>
             </div>
           </div>
         </div>
@@ -277,13 +341,14 @@ const s: Record<string, React.CSSProperties> = {
   tutorCard: { background: "#fff", borderRadius: "12px", padding: "16px 20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
   tutorGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "13px" },
   filtrosCard: { background: "#fff", borderRadius: "12px", padding: "20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
-  filtrosGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "16px", alignItems: "center" },
+  filtrosGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "16px" },
   label: { fontSize: "12px", fontWeight: "600", color: "#333", display: "block", marginBottom: "4px" },
   input: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px" },
   btnFiltrar: { background: "#2C1810", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", cursor: "pointer" },
+  btnLimpiar: { background: "#6c757d", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", fontSize: "13px", cursor: "pointer", marginLeft: "8px" },
   vacio: { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },
-  tablaWrap: { overflowX: "auto", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
-  tabla: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
+  tablaWrap: { overflowX: "auto", overflowY: "auto", maxHeight: "500px", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", border: "1px solid #f0f0f0" },
+  tabla: { width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "800px" },
   thead: { background: "linear-gradient(135deg,#2C1810,#4a2518)" },
   th: { padding: "12px 14px", color: "#fff", fontSize: "12px", fontWeight: "bold", textAlign: "left" },
   td: { padding: "10px 14px", borderBottom: "1px solid #f0f0f0" },

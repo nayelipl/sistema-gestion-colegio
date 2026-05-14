@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AsyncSelect from "react-select/async";
 import { calcularEdadDisplay } from "@/lib/calcular-edad";
+import { formatFechaLarga } from "@/lib/formatear-fecha";
+import { useImprimir } from "@/hooks/useImprimir";
+import { ImprimirContenido } from "@/components/ImprimirContenido";
 
 type Estudiante = {
   id: number;
@@ -64,6 +67,10 @@ export default function MatriculaPage() {
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
   const [mostrarListado, setMostrarListado] = useState(false);
+  const [mostrarModalTransporte, setMostrarModalTransporte] = useState(false);
+  const [estudianteMatriculado, setEstudianteMatriculado] = useState<any>(null);
+
+  const { componentRef, handleImprimir } = useImprimir();
 
   const ROLES_PERMITIDOS = ["ADMINISTRADOR", "DIRECCION_ACADEMICA", "SECRETARIA_DOCENTE", "CAJERO"];
 
@@ -103,7 +110,7 @@ export default function MatriculaPage() {
   const cargarEstudiantes = async (inputValue: string) => {
     if (!inputValue || inputValue.length < 2) return [];
     try {
-      const res = await fetch(`/api/usuarios/estudiantes/buscar?q=${encodeURIComponent(inputValue)}`);
+      const res = await fetch(`/api/usuarios/estudiantes/buscar?q=${encodeURIComponent(inputValue)}&anioEscolar=${anioEscolar}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data;
@@ -179,12 +186,19 @@ export default function MatriculaPage() {
 
       if (!res.ok) {
         setError(data.error);
-      } else {
+        setCargando(false);
+        return;
+      } 
+      
         setExito("Matriculación guardada exitosamente");
         limpiarFormulario();
         cargarMatriculaciones();
+
+        setEstudianteMatriculado(estudianteSeleccionado);
+        setMostrarModalTransporte(true);
+
         setTimeout(() => setExito(""), 3000);
-      }
+        setCargando(false);
     } catch (error) {
       setError("Error de conexión al servidor");
     } finally {
@@ -232,13 +246,13 @@ export default function MatriculaPage() {
           <div style={s.formHeader}>
             <div style={s.formHeaderLeft}>
               <span style={s.inscripcionNo}>Inscripción no.: {modoEdicion === "editando" && indiceActual >= 0 ? matriculaciones[indiceActual]?.inscripcionNo || "NUEVO" : "NUEVO"}</span>
-              <span style={s.fecha}>Fecha: {new Date().toLocaleDateString("es-DO")}</span>
+              <span style={s.fecha}>Fecha: {formatFechaLarga(new Date())}</span>
             </div>
             <div style={s.navegacion}>
               <button onClick={() => navegar("primero")} style={s.btnNav} disabled={matriculaciones.length === 0}>⏮</button>
-              <button onClick={() => navegar("anterior")} style={s.btnNav} disabled={matriculaciones.length === 0}>◀</button>
-              <span style={s.navInfo}>{indiceActual >= 0 ? `${indiceActual + 1}/${matriculaciones.length}` : "0/0"}</span>
-              <button onClick={() => navegar("siguiente")} style={s.btnNav} disabled={matriculaciones.length === 0}>▶</button>
+              <button onClick={() => navegar("anterior")} style={s.btnNav} disabled={matriculaciones.length === 0 || indiceActual <= 0}>◀</button>
+              <span style={s.navInfo}>Registro {indiceActual + 1}/{matriculaciones.length}</span>
+              <button onClick={() => navegar("siguiente")} style={s.btnNav} disabled={matriculaciones.length === 0 || indiceActual >= matriculaciones.length - 1}>▶</button>
               <button onClick={() => navegar("ultimo")} style={s.btnNav} disabled={matriculaciones.length === 0}>⏭</button>
               <button onClick={limpiarFormulario} style={s.btnNuevo}>+ Nuevo </button>
             </div>
@@ -329,9 +343,13 @@ export default function MatriculaPage() {
           </div>
 
           <div style={s.buttonGroup}>
-            <button onClick={limpiarFormulario} style={s.btnSecundario}>Cancelar</button>
+            {modoEdicion === "editando" && (
+              <button onClick={limpiarFormulario} style={s.btnSecundario}>Cancelar</button>
+            )}
             <button onClick={() => setMostrarListado(true)} style={s.btnSecundario}>Ver Listado</button>
-            <button style={s.btnSecundario} disabled>Imprimir</button>
+            {modoEdicion === "editando" && indiceActual >= 0 && (
+                <button onClick={handleImprimir} style={s.btnImprimir}>🖨️ Imprimir</button>
+              )}
             <button onClick={guardarMatricula} disabled={cargando} style={s.btnGuardar}>
               {cargando ? "Guardando..." : "Guardar"}
             </button>
@@ -350,43 +368,84 @@ export default function MatriculaPage() {
               {matriculaciones.length === 0 ? (
                 <p style={{ textAlign: "center", color: "#888" }}>No hay matriculaciones registradas</p>
               ) : (
-                <table style={s.tabla}>
-                  <thead>
-                    <tr style={s.thead}>
-                      <th style={s.th}>Inscripción No.</th>
-                      <th style={s.th}>Fecha</th>
-                      <th style={s.th}>Estudiante</th>
-                      <th style={s.th}>Sección</th>
-                      <th style={s.th}>Valor</th>
-                      <th style={s.th}>Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matriculaciones.map((mat) => (
-                      <tr key={mat.id}>
-                        <td style={s.td}>{mat.inscripcionNo}</td>
-                        <td style={s.td}>{new Date(mat.fecha).toLocaleDateString("es-DO")}</td>
-                        <td style={s.td}>{mat.estudiante?.nombre} {mat.estudiante?.apellido}</td>
-                        <td style={s.td}>{mat.seccion?.aula || mat.seccion?.nombre || "—"}</td>
-                        <td style={s.td}>
-                          RD${typeof mat.valorCobrado === 'number' 
-                            ? mat.valorCobrado.toFixed(2) 
-                            : parseFloat(String(mat.valorCobrado || 0)).toFixed(2)}
-                        </td>
-                        <td style={s.td}>
-                          <button onClick={() => cargarMatriculaEnFormulario(mat)} style={s.btnVer}>
-                            Ver
-                          </button>
-                        </td>
+                <div style={s.tablaWrap}>
+                  <table style={s.tabla}>
+                    <thead>
+                      <tr style={s.thead}>
+                        <th style={s.th}>Inscripción No.</th>
+                        <th style={s.th}>Fecha</th>
+                        <th style={s.th}>Estudiante</th>
+                        <th style={s.th}>Sección</th>
+                        <th style={s.th}>Valor</th>
+                        <th style={s.th}>Acción</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {matriculaciones.map((mat) => (
+                        <tr key={mat.id}>
+                          <td style={s.td}>{mat.inscripcionNo}</td>
+                          <td style={s.td}>{formatFechaLarga(mat.fecha)}</td>
+                          <td style={s.td}>{mat.estudiante?.nombre} {mat.estudiante?.apellido}</td>
+                          <td style={s.td}>{mat.seccion?.aula || mat.seccion?.nombre || "—"}</td>
+                          <td style={s.td}>
+                            RD${typeof mat.valorCobrado === 'number' 
+                              ? mat.valorCobrado.toFixed(2) 
+                              : parseFloat(String(mat.valorCobrado || 0)).toFixed(2)}
+                          </td>
+                          <td style={s.td}>
+                            <button onClick={() => cargarMatriculaEnFormulario(mat)} style={s.btnVer}>
+                              Ver
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
+
+      {mostrarModalTransporte && (
+        <div style={s.modalOverlay}>
+          <div style={s.modalTransporte}>
+            <h3 style={s.modalTitulo}>🚌 Servicio de Transporte</h3>
+            <p style={{ marginBottom: "16px" }}>
+              ¿Desea activar el servicio de transporte para el estudiante <strong>{estudianteMatriculado?.nombre} {estudianteMatriculado?.apellido}</strong>?
+            </p>
+            <div style={s.modalButtons}>
+              <button
+                onClick={() => {
+                  setMostrarModalTransporte(false);
+                  router.push(`/dashboard/transporte?vincular=true&estudianteId=${estudianteMatriculado?.id}`);
+                }}
+                style={s.btnConfirmar}
+              >
+                ✅ Sí, activar transporte
+              </button>
+              <button
+                onClick={() => setMostrarModalTransporte(false)}
+                style={s.btnCancelar}
+              >
+                ❌ No, gracias
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Componente oculto para imprimir */}
+      <div style={{ display: "none" }}>
+        <ImprimirContenido
+          ref={componentRef}
+          titulo="Comprobante de Matrícula"
+          datos={modoEdicion === "editando" && indiceActual >= 0 ? matriculaciones[indiceActual] : null}
+          tipo="matricula"
+        />
+      </div>
+
     </main>
   );
 }
@@ -394,43 +453,50 @@ export default function MatriculaPage() {
 const s: Record<string, React.CSSProperties> = {
   loading: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
   main: { minHeight: "100vh", background: "#f0f4f8", fontFamily: "Arial, sans-serif" },
-  nav: { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  nav: { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" },
   navBack: { color: "#fff", textDecoration: "none", fontSize: "14px" },
   navTitle: { fontWeight: "bold", fontSize: "16px" },
   navUser: { fontSize: "14px" },
   contenido: { maxWidth: "800px", margin: "0 auto", padding: "28px 20px" },
-  header: { marginBottom: "24px" },
+  header: { marginBottom: "24px", flexWrap: "wrap", gap: "12px" },
   titulo: { fontSize: "22px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
   subtitulo: { fontSize: "13px", color: "#666", margin: 0 },
   exitoMsg: { background: "#f0fff4", border: "1px solid #9ae6b4", color: "#276749", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px" },
   errorMsg: { background: "#fff5f5", border: "1px solid #fed7d7", color: "#c53030", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px" },
   formCard: { background: "#fff", borderRadius: "12px", padding: "24px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
-  formHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", paddingBottom: "12px", borderBottom: "2px solid #eee" },
-  formHeaderLeft: { display: "flex", gap: "24px" },
+  formHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", paddingBottom: "12px", borderBottom: "2px solid #eee", flexWrap: "wrap", gap: "12px" },
+  formHeaderLeft: { display: "flex", gap: "24px", flexWrap: "wrap" },
   inscripcionNo: { fontWeight: "bold", color: "#2C1810", fontSize: "14px" },
   fecha: { color: "#666", fontSize: "13px" },
-  navegacion: { display: "flex", gap: "8px", alignItems: "center" },
+  navegacion: { display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" },
   btnNav: { background: "#f0f0f0", border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", fontSize: "14px" },
-  btnNuevo: { background: "#2F855A", color: "#fff", border: "none", borderRadius: "6px", padding: "6px 12px", cursor: "pointer", fontSize: "12px",fontWeight: "bold", marginLeft: "16px",},
+  btnNuevo: { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
   navInfo: { fontSize: "12px", color: "#666", minWidth: "50px", textAlign: "center" },
   seccion: { marginBottom: "24px", padding: "16px", background: "#fafafa", borderRadius: "8px" },
   seccionTitulo: { fontSize: "15px", fontWeight: "bold", color: "#2C1810", margin: "0 0 16px 0", borderBottom: "2px solid #1F5C99", paddingBottom: "6px", display: "inline-block" },
-  grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px" },
   label: { fontSize: "12px", fontWeight: "600", color: "#333", display: "block", marginBottom: "4px" },
   input: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", boxSizing: "border-box" as any },
   textarea: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", fontFamily: "inherit", boxSizing: "border-box" as any },
-  buttonGroup: { display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #eee" },
+  buttonGroup: { display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #eee", flexWrap: "wrap" },
   btnGuardar: { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 24px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
   btnSecundario: { background: "#f0f0f0", color: "#333", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", cursor: "pointer" },
   overlay: { position: "fixed" as any, inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
   modalCard: { background: "#fff", borderRadius: "12px", width: "90%", maxWidth: "900px", maxHeight: "80vh", display: "flex", flexDirection: "column" as any },
   modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #ddd" },
-  modalTitulo: { fontSize: "18px", fontWeight: "bold", color: "#2C1810", margin: 0 },
+  modalTitulo: { fontSize: "18px", fontWeight: "bold", color: "#2C1810", marginBottom: "16px" },
   btnCerrarModal: { background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#666" },
   modalBody: { padding: "20px", overflow: "auto" as any, flex: 1 },
+  tablaWrap: { overflowX: "auto", width: "100%" },
   tabla: { width: "100%", borderCollapse: "collapse" as any, fontSize: "13px" },
   thead: { background: "linear-gradient(135deg,#2C1810,#4a2518)" },
   th: { padding: "10px 12px", color: "#fff", textAlign: "left" as any, fontSize: "12px" },
   td: { padding: "8px 12px", borderBottom: "1px solid #eee" },
   btnVer: { background: "#EBF3FB", color: "#2C1810", border: "none", borderRadius: "4px", padding: "4px 10px", cursor: "pointer", fontSize: "12px" },
+  modalOverlay: { position: "fixed" as const, top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
+  modalTransporte: { background: "#fff", borderRadius: "12px", padding: "24px", width: "400px", maxWidth: "90%", textAlign: "center" as const },
+  modalButtons: { display: "flex", gap: "12px", justifyContent: "center", marginTop: "16px", flexWrap: "wrap" },
+  btnConfirmar: { background: "#2F855A", color: "#fff", border: "none", borderRadius: "6px", padding: "10px 20px", cursor: "pointer", fontSize: "14px" },
+  btnCancelar: { background: "#6c757d", color: "#fff", border: "none", borderRadius: "6px", padding: "10px 20px", cursor: "pointer", fontSize: "14px" },
+  btnImprimir: { background: "#4299e1", color: "#fff", border: "none", borderRadius: "4px", padding: "4px 12px", cursor: "pointer", marginRight: "8px", fontSize: "12px" },
 };

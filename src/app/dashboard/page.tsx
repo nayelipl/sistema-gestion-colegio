@@ -105,6 +105,27 @@ const MODULOS = [
     roles: ["ADMINISTRADOR"],
   },
   {
+  nombre: "Cobro de Otros Ingresos",
+  icono: "💰",
+  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+  href: "/dashboard/financiero/cobro-otros-ingresos",
+  roles: ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Reporte de Ingresos",
+    icono: "📊",
+    desc: "Cuadre de Caja Grande y reportes de ingresos.",
+    href: "/dashboard/financiero/reporte-ingresos",
+    roles: ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Caja Chica",
+    icono: "💰",
+    desc: "Gestión de desembolsos y cuadre de caja chica.",
+    href: "/dashboard/financiero/caja-chica",
+    roles: ["ADMINISTRADOR"],
+  },
+  {
     nombre: "Comunicaciones",
     icono:  "📢",
     desc:   "Blog, materiales y comunicados.",
@@ -139,7 +160,7 @@ const MODULOS = [
   {
     nombre: "Módulo Financiero",
     icono:  "💰",
-    desc:   "Cuentas por cobrar, corte de pagos e inventario de uniformes.",
+    desc:   "Cuentas por cobrar y corte de pagos.",
     href:   "/dashboard/financiero",
     roles:  ["CONTADOR"],
   },
@@ -165,12 +186,34 @@ const MODULOS = [
   roles: ["CONTADOR"],
   },
   {
+  nombre: "Cobro de Otros Ingresos",
+  icono: "💰",
+  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+  href: "/dashboard/financiero/cobro-otros-ingresos",
+  roles: ["CONTADOR"],
+  },
+  {
     nombre: "Cuentas por Cobrar",
     icono: "📊",
     desc: "Control de deudores y cargos pendientes",
     href: "/dashboard/financiero/cuentas-por-cobrar",
     roles: ["CONTADOR"],
   },
+  {
+    nombre: "Reporte de Ingresos",
+    icono: "📊",
+    desc: "Cuadre de Caja Grande y reportes de ingresos.",
+    href: "/dashboard/financiero/reporte-ingresos",
+    roles: ["CONTADOR"],
+  },
+  {
+    nombre: "Caja Chica",
+    icono: "💰",
+    desc: "Gestión de desembolsos y cuadre de caja chica.",
+    href: "/dashboard/financiero/caja-chica",
+    roles: ["CONTADOR"],
+  },
+  
   // ── CAJERO ─────────────────────────────────────────────
   {
     nombre: "Inscripciones",
@@ -206,6 +249,20 @@ const MODULOS = [
   desc: "Registro de pagos presenciales de colegiatura y transporte",
   href: "/dashboard/financiero/cobro-cargos",
   roles: ["CAJERO"],
+  },
+  {
+  nombre: "Cobro de Otros Ingresos",
+  icono: "💰",
+  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+  href: "/dashboard/financiero/cobro-otros-ingresos",
+  roles: ["CAJERO"],
+  },
+  {
+    nombre: "Caja Chica",
+    icono: "💰",
+    desc: "Gestión de desembolsos y cuadre de caja chica.",
+    href: "/dashboard/financiero/caja-chica",
+    roles: ["CAJERO"],
   },
 
   // ── DIRECCIÓN ACADÉMICA ────────────────────────────────
@@ -357,6 +414,13 @@ const MODULOS = [
   icono: "📄",
   desc: "Ver mis movimientos y balance de cuenta",
   href: "/dashboard/financiero/estado-cuenta",
+  roles: ["TUTOR"],
+  },
+  {
+  nombre: "Pago en línea",
+  icono: "💰",
+  desc: "Realizar pagos en línea de colegiatura, transporte y otros conceptos.",
+  href: "/dashboard/tutor/pago-en-linea",
   roles: ["TUTOR"],
   },
   {

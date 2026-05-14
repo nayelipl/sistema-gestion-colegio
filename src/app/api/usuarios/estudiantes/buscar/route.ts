@@ -5,20 +5,47 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q");
+    const tipo = searchParams.get("tipo"); // 'no_matriculados' | 'matriculados' | 'todos'
+
+    const tarifaActiva = await prisma.tarifaAnioEscolar.findFirst({
+      where: { activo: true },
+      select: { anioEscolar: true }
+    });
+    
+    const anioEscolar = tarifaActiva?.anioEscolar || "2025-2026";
 
     if (!q || q.length < 2) {
       return NextResponse.json([]);
     }
 
+    let whereCondition: any = {
+      OR: [
+        { codigo: { contains: q } },
+        { nombre: { contains: q } },
+        { apellido: { contains: q } },
+      ],
+      activo: true,
+    };
+
+    // Filtrar según el tipo
+    if (tipo === "no_matriculados") {
+      whereCondition.NOT = {
+        matriculas: {
+          some: {
+            anioEscolar: anioEscolar
+          }
+        }
+      };
+    } else if (tipo === "matriculados") {
+      whereCondition.matriculas = {
+        some: {
+          anioEscolar: anioEscolar
+        }
+      };
+    }
+
     const estudiantes = await prisma.estudiante.findMany({
-      where: {
-        OR: [
-          { codigo: { contains: q } },
-          { nombre: { contains: q } },
-          { apellido: { contains: q } },
-        ],
-        activo: true,
-      },
+      where: whereCondition,
       include: {
         tutor: {
           select: {
