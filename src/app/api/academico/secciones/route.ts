@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verificarPermiso } from "@/lib/auth-helper";
+
+const ROLES_LECTURA  = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA","SECRETARIA_DOCENTE","MAESTRO","ORIENTADOR_ESCOLAR"];
+const ROLES_ESCRITURA = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA"];
 
 export async function GET() {
   try {
@@ -14,13 +18,14 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const permiso = await verificarPermiso(ROLES_ESCRITURA);
+  if (permiso.error) return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const { codigo, aula, cursoId, maestroEncargadoId, cupos } = await req.json();
-    
     if (!codigo || !aula || !cursoId) {
       return NextResponse.json({ error: "Código, aula y curso son obligatorios." }, { status: 400 });
     }
-
     const existe = await prisma.seccion.findUnique({ where: { codigo } });
     if (existe) return NextResponse.json({ error: "Ya existe una sección con ese código." }, { status: 409 });
 
