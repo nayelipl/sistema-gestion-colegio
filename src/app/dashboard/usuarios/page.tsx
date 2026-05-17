@@ -15,7 +15,7 @@ type Tutor = {
 };
 type Estudiante = {
   id: number; codigo: string; nombre: string; apellido: string; RNE?: string;
-   fechaNac?: string; activo: boolean;
+  fechaNac?: string; activo: boolean;
   tutor?: { id: number; nombre: string; apellido: string; codigo: string } | null;
 };
 type Tab = "empleados" | "tutores" | "estudiantes";
@@ -31,6 +31,9 @@ const ROLES_EMPLEADO: Record<string, string> = {
   ORIENTADOR_ESCOLAR:      "Orientador Escolar",
   MAESTRO:                 "Maestro",
 };
+
+// Roles que pueden acceder a esta página
+const ROLES_PERMITIDOS = ["ADMINISTRADOR", "CAJERO", "SECRETARIA_DOCENTE"];
 
 export default function UsuariosPage() {
   const { data: session, status } = useSession();
@@ -49,10 +52,17 @@ export default function UsuariosPage() {
   const [error, setError]               = useState("");
 
   const rol = (session?.user as any)?.role ?? "";
+  // La Secretaria Docente solo ve estudiantes y puede dar de baja
+  const esSecretaria = rol === "SECRETARIA_DOCENTE";
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
+
+  // Si es secretaria, forzar tab estudiantes
+  useEffect(() => {
+    if (esSecretaria) setTab("estudiantes");
+  }, [esSecretaria]);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -73,29 +83,21 @@ export default function UsuariosPage() {
     );
 
   const abrirNuevo = () => {
-  setForm({
-    nombre: "",
-    apellido: "",
-    cedula: "",
-    email: "",
-    telefono: "",
-    ocupacion: "",
-    nombreContactoAlterno: "",
-    telefonoContactoAlterno: "",
-    contrasena: ""
-  });
-  setSeleccionado(null);
-  setModal("nuevo");
-  setError("");
-  setContrasenaTemp("");
-};
+    setForm({
+      nombre: "", apellido: "", cedula: "", email: "",
+      telefono: "", ocupacion: "", nombreContactoAlterno: "",
+      telefonoContactoAlterno: "", contrasena: ""
+    });
+    setSeleccionado(null);
+    setModal("nuevo");
+    setError(""); setContrasenaTemp("");
+  };
 
   const abrirEditar = (u: any) => {
     setSeleccionado(u);
     setForm({ ...u });
     setModal("editar");
-    setError("");
-    setContrasenaTemp("");
+    setError(""); setContrasenaTemp("");
   };
 
   const guardar = async (esNuevo: boolean) => {
@@ -110,7 +112,6 @@ export default function UsuariosPage() {
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error); return; }
-
     if (data.contrasenaTemp) {
       setContrasenaTemp(data.contrasenaTemp);
       setMensaje(data.mensaje);
@@ -131,8 +132,24 @@ export default function UsuariosPage() {
     cargarDatos();
   };
 
+  // ── DAR DE BAJA ESTUDIANTE (solo SECRETARIA_DOCENTE) ──────────────────────
+  const darDeBaja = async (est: Estudiante) => {
+    if (!confirm(
+      `¿Dar de baja al estudiante ${est.nombre} ${est.apellido}?\n\n` +
+      `Su estado cambiará a INACTIVO y no podrá acceder al sistema.\n` +
+      `Esta acción puede revertirse habilitando el usuario nuevamente.`
+    )) return;
+
+    const res  = await fetch(`/api/usuarios/estudiantes/${est.id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error); return; }
+    setMensaje(data.mensaje);
+    cargarDatos();
+    setTimeout(() => setMensaje(""), 4000);
+  };
+
   if (status === "loading") return <div style={s.loading}>Cargando...</div>;
-  if (rol !== "ADMINISTRADOR" && rol !== "CAJERO") {
+  if (!ROLES_PERMITIDOS.includes(rol)) {
     return (
       <div style={s.sinAcceso}>
         <p>🚫 No tienes permiso para acceder a esta sección.</p>
@@ -143,7 +160,11 @@ export default function UsuariosPage() {
 
   const lista         = tab === "empleados" ? empleados : tab === "tutores" ? tutores : estudiantes;
   const listaFiltrada = filtrar(lista);
-  const tabsDisponibles: Tab[] = rol === "CAJERO"
+
+  // Tabs según rol
+  const tabsDisponibles: Tab[] = esSecretaria
+    ? ["estudiantes"]
+    : rol === "CAJERO"
     ? ["tutores", "estudiantes"]
     : ["empleados", "tutores", "estudiantes"];
 
@@ -160,17 +181,22 @@ export default function UsuariosPage() {
           <div>
             <h1 style={s.titulo}>Gestión de Usuarios</h1>
             <p style={s.subtitulo}>
-              {rol === "CAJERO"
+              {esSecretaria
+                ? "Consulta y baja de estudiantes"
+                : rol === "CAJERO"
                 ? "Registro de tutores y estudiantes durante la inscripción"
                 : "Administración de empleados, tutores y estudiantes"}
             </p>
           </div>
-          <button onClick={abrirNuevo} style={s.btnNuevo}>
-            + Nuevo {tab === "empleados" ? "empleado" : tab === "tutores" ? "tutor" : "estudiante"}
-          </button>
+          {/* La secretaria NO puede crear nuevos usuarios */}
+          {!esSecretaria && (
+            <button onClick={abrirNuevo} style={s.btnNuevo}>
+              + Nuevo {tab === "empleados" ? "empleado" : tab === "tutores" ? "tutor" : "estudiante"}
+            </button>
+          )}
         </div>
 
-        {mensaje && !contrasenaTemp && <div style={s.exito}>{mensaje}</div>}
+        {mensaje && !contrasenaTemp && <div style={s.exito}>✅ {mensaje}</div>}
 
         <div style={s.tabs}>
           {tabsDisponibles.map(t => (
@@ -239,7 +265,9 @@ export default function UsuariosPage() {
                       <td style={s.td}>{u.email}</td>
                       <td style={s.td}>{u.telefono || "—"}</td>
                       <td style={s.td}><span style={u.activo ? s.activo : s.inactivo}>{u.activo ? "Activo" : "Inactivo"}</span></td>
-                      <td style={s.td}><Acciones u={u} onEditar={abrirEditar} onEstado={cambiarEstado} /></td>
+                      <td style={s.td}>
+                        <AccionesGenerales u={u} onEditar={abrirEditar} onEstado={cambiarEstado} />
+                      </td>
                     </>}
                     {tab === "tutores" && <>
                       <td style={s.td}><code style={s.codigo}>{u.codigo}</code></td>
@@ -249,7 +277,9 @@ export default function UsuariosPage() {
                       <td style={s.td}>{u.telefono || "—"}</td>
                       <td style={s.td}>{u.estudiantes?.length ?? 0} representado(s)</td>
                       <td style={s.td}><span style={u.activo ? s.activo : s.inactivo}>{u.activo ? "Activo" : "Inactivo"}</span></td>
-                      <td style={s.td}><Acciones u={u} onEditar={abrirEditar} onEstado={cambiarEstado} /></td>
+                      <td style={s.td}>
+                        <AccionesGenerales u={u} onEditar={abrirEditar} onEstado={cambiarEstado} />
+                      </td>
                     </>}
                     {tab === "estudiantes" && <>
                       <td style={s.td}><code style={s.codigo}>{u.codigo}</code></td>
@@ -257,7 +287,21 @@ export default function UsuariosPage() {
                       <td style={s.td}>{u.RNE || "—"}</td>
                       <td style={s.td}>{u.tutor ? `${u.tutor.nombre} ${u.tutor.apellido} (${u.tutor.codigo})` : "—"}</td>
                       <td style={s.td}><span style={u.activo ? s.activo : s.inactivo}>{u.activo ? "Activo" : "Inactivo"}</span></td>
-                      <td style={s.td}><Acciones u={u} onEditar={abrirEditar} onEstado={cambiarEstado} /></td>
+                      <td style={s.td}>
+                        {esSecretaria ? (
+                          // Secretaria solo puede dar de baja (si está activo)
+                          u.activo ? (
+                            <button onClick={() => darDeBaja(u)} style={s.btnBaja}>
+                              🚫 Dar de baja
+                            </button>
+                          ) : (
+                            <span style={s.inactivo}>Inactivo</span>
+                          )
+                        ) : (
+                          // Admin y Cajero: editar + inhabilitar/habilitar
+                          <AccionesGenerales u={u} onEditar={abrirEditar} onEstado={cambiarEstado} />
+                        )}
+                      </td>
                     </>}
                   </tr>
                 ))}
@@ -267,7 +311,7 @@ export default function UsuariosPage() {
         )}
       </div>
 
-      {modal && (
+      {modal && !esSecretaria && (
         <div style={s.overlay}>
           <div style={s.modalCard}>
             {contrasenaTemp ? (
@@ -315,7 +359,7 @@ export default function UsuariosPage() {
   );
 }
 
-function Acciones({ u, onEditar, onEstado }: any) {
+function AccionesGenerales({ u, onEditar, onEstado }: any) {
   return (
     <div style={{ display: "flex", gap: "6px" }}>
       <button onClick={() => onEditar(u)} style={s.btnEditar}>✏️ Editar</button>
@@ -361,14 +405,14 @@ function FormTutor({ form, setForm, esNuevo }: any) {
   return (
     <div style={s.formGrid}>
       <Campo label="Nombre *"       name="nombre"    value={form.nombre}    onChange={c} required />
-      <Campo label="Apellido *"     name="apellido"  value={form.apellido}  onChange={c}  required />
-      <Campo label="Cédula *"       name="cedula"    value={form.cedula}    onChange={c}  required />
-      <Campo label="Teléfono"       name="telefono"  value={form.telefono}  onChange={c} required />
-      <Campo label="Dirección"      name="direccion" value={form.direccion} onChange={c} required />
+      <Campo label="Apellido *"     name="apellido"  value={form.apellido}  onChange={c} required />
+      <Campo label="Cédula *"       name="cedula"    value={form.cedula}    onChange={c} required />
+      <Campo label="Teléfono"       name="telefono"  value={form.telefono}  onChange={c} />
+      <Campo label="Dirección"      name="direccion" value={form.direccion} onChange={c} />
       <Campo label="Email *"        name="email"     value={form.email}     onChange={c} type="email" required />
       <Campo label="Ocupación"      name="ocupacion" value={form.ocupacion} onChange={c} />
-      <Campo label="Nombre de contacto alterno *" value={form.nombreContactoAlterno} onChange={c} required />
-      <Campo label="Teléfono de contacto alterno" name="telefonoContactoAlterno" value={form.telefonoContactoAlterno} onChange={c} required />
+      <Campo label="Nombre contacto alterno *" name="nombreContactoAlterno" value={form.nombreContactoAlterno} onChange={c} required />
+      <Campo label="Teléfono contacto alterno" name="telefonoContactoAlterno" value={form.telefonoContactoAlterno} onChange={c} />
       {esNuevo && (
         <Campo label="Contraseña *" name="contrasena" value={form.contrasena} onChange={c} type="password" required />
       )}
@@ -389,9 +433,7 @@ function FormEstudiante({ form, setForm, tutores, esNuevo }: any) {
         <select name="tutorId" value={form.tutorId || ""} onChange={c} style={s.input}>
           <option value="">Sin tutor asignado</option>
           {tutores.map((t: Tutor) => (
-            <option key={t.id} value={t.id}>
-              {t.nombre} {t.apellido} — Cód. {t.codigo}
-            </option>
+            <option key={t.id} value={t.id}>{t.nombre} {t.apellido} — Cód. {t.codigo}</option>
           ))}
         </select>
       </div>
@@ -415,48 +457,49 @@ function Campo({ label, name, value, onChange, type = "text" }: any) {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  loading:     { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
-  sinAcceso:   { minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" },
-  enlace:      { color: "#2C1810", fontWeight: "bold" },
-  main:        { minHeight: "100vh", background: "#f0f4f8", fontFamily: "Arial, sans-serif" },
-  nav:         { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" },
-  navBack:     { color: "#fff", textDecoration: "none", fontSize: "14px" },
-  navTitle:    { fontWeight: "bold", fontSize: "16px" },
-  navUser:     { fontSize: "14px" },
-  contenido:   { maxWidth: "1100px", margin: "0 auto", padding: "28px 20px" },
-  header:      { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" },
-  titulo:      { fontSize: "22px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
-  subtitulo:   { fontSize: "13px", color: "#666", margin: 0 },
-  btnNuevo:    { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
-  exito:       { background: "#f0fff4", border: "1px solid #9ae6b4", color: "#276749", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", fontSize: "13px" },
-  tabs:        { display: "flex", gap: "8px", marginBottom: "16px" },
-  tab:         { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666", display: "flex", alignItems: "center", gap: "8px" },
-  tabActivo:   { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
-  badge:       { background: "#2C1810", color: "#fff", borderRadius: "10px", padding: "2px 8px", fontSize: "11px" },
+  loading:       { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
+  sinAcceso:     { minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" },
+  enlace:        { color: "#2C1810", fontWeight: "bold" },
+  main:          { minHeight: "100vh", background: "#f0f4f8", fontFamily: "Arial, sans-serif" },
+  nav:           { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  navBack:       { color: "#fff", textDecoration: "none", fontSize: "14px" },
+  navTitle:      { fontWeight: "bold", fontSize: "16px" },
+  navUser:       { fontSize: "14px" },
+  contenido:     { maxWidth: "1100px", margin: "0 auto", padding: "28px 20px" },
+  header:        { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" },
+  titulo:        { fontSize: "22px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
+  subtitulo:     { fontSize: "13px", color: "#666", margin: 0 },
+  btnNuevo:      { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
+  exito:         { background: "#f0fff4", border: "1px solid #9ae6b4", color: "#276749", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", fontSize: "13px" },
+  tabs:          { display: "flex", gap: "8px", marginBottom: "16px" },
+  tab:           { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600" as any, color: "#666", display: "flex", alignItems: "center", gap: "8px" },
+  tabActivo:     { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  badge:         { background: "#2C1810", color: "#fff", borderRadius: "10px", padding: "2px 8px", fontSize: "11px" },
   inputBusqueda: { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px", marginBottom: "16px", boxSizing: "border-box" as any },
-  vacio:       { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },
-  tablaWrap:   { overflowX: "auto" as any, background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
-  tabla:       { width: "100%", borderCollapse: "collapse" as any },
-  thead:       { background: "linear-gradient(135deg,#2C1810,#4a2518)" },
-  th:          { padding: "12px 14px", color: "#fff", fontSize: "12px", fontWeight: "bold", textAlign: "left" as any },
-  td:          { padding: "10px 14px", fontSize: "13px", borderBottom: "1px solid #f0f0f0" },
-  activo:      { background: "#c6f6d5", color: "#276749", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
-  inactivo:    { background: "#fed7d7", color: "#c53030", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
-  rolBadge:    { background: "#F3E8FF", color: "#C0392B", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
-  codigo:      { background: "#f0f4f8", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontFamily: "monospace" },
-  btnEditar:   { background: "#EBF3FB", color: "#2C1810", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", cursor: "pointer" },
-  btnInhabilitar: { background: "#fff5f5", color: "#c53030", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", cursor: "pointer" },
-  btnHabilitar:   { background: "#f0fff4", color: "#276749", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", cursor: "pointer" },
-  overlay:     { position: "fixed" as any, inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
-  modalCard:   { background: "#fff", borderRadius: "16px", padding: "32px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" as any },
-  modalTitulo: { fontSize: "18px", fontWeight: "bold", color: "#2C1810", margin: "0 0 20px" },
-  formGrid:    { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" },
-  label:       { fontSize: "12px", fontWeight: "600", color: "#333", display: "block", marginBottom: "4px" },
-  input:       { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", boxSizing: "border-box" as any },
-  errorMsg:    { color: "#e53e3e", fontSize: "13px", background: "#fff5f5", border: "1px solid #fed7d7", borderRadius: "6px", padding: "8px 12px", marginBottom: "12px" },
-  modalBotones:{ display: "flex", gap: "10px", justifyContent: "flex-end" },
-  btnCancelar: { background: "#f0f0f0", color: "#333", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", cursor: "pointer" },
-  btnGuardar:  { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
+  vacio:         { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },
+  tablaWrap:     { overflowX: "auto" as any, background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
+  tabla:         { width: "100%", borderCollapse: "collapse" as any },
+  thead:         { background: "linear-gradient(135deg,#2C1810,#4a2518)" },
+  th:            { padding: "12px 14px", color: "#fff", fontSize: "12px", fontWeight: "bold", textAlign: "left" as any },
+  td:            { padding: "10px 14px", fontSize: "13px", borderBottom: "1px solid #f0f0f0" },
+  activo:        { background: "#c6f6d5", color: "#276749", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
+  inactivo:      { background: "#fed7d7", color: "#c53030", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
+  rolBadge:      { background: "#F3E8FF", color: "#C0392B", borderRadius: "12px", padding: "3px 10px", fontSize: "11px", fontWeight: "bold" },
+  codigo:        { background: "#f0f4f8", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontFamily: "monospace" },
+  btnEditar:     { background: "#EBF3FB", color: "#2C1810", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", cursor: "pointer" },
+  btnInhabilitar:{ background: "#fff5f5", color: "#c53030", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", cursor: "pointer" },
+  btnHabilitar:  { background: "#f0fff4", color: "#276749", border: "none", borderRadius: "6px", padding: "5px 10px", fontSize: "12px", cursor: "pointer" },
+  btnBaja:       { background: "#fff5f5", color: "#c53030", border: "1px solid #fed7d7", borderRadius: "6px", padding: "5px 12px", fontSize: "12px", cursor: "pointer", fontWeight: "bold" as any },
+  overlay:       { position: "fixed" as any, inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
+  modalCard:     { background: "#fff", borderRadius: "16px", padding: "32px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" as any },
+  modalTitulo:   { fontSize: "18px", fontWeight: "bold", color: "#2C1810", margin: "0 0 20px" },
+  formGrid:      { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" },
+  label:         { fontSize: "12px", fontWeight: "600" as any, color: "#333", display: "block", marginBottom: "4px" },
+  input:         { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", boxSizing: "border-box" as any },
+  errorMsg:      { color: "#e53e3e", fontSize: "13px", background: "#fff5f5", border: "1px solid #fed7d7", borderRadius: "6px", padding: "8px 12px", marginBottom: "12px" },
+  modalBotones:  { display: "flex", gap: "10px", justifyContent: "flex-end" },
+  btnCancelar:   { background: "#f0f0f0", color: "#333", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", cursor: "pointer" },
+  btnGuardar:    { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
   contrasenaBox: { background: "#EBF3FB", border: "2px dashed #1F5C99", borderRadius: "10px", padding: "16px", margin: "12px 0" },
-  infoBox:     { background: "#fffbeb", border: "1px solid #f6e05e", borderRadius: "6px", padding: "8px 12px", fontSize: "12px", color: "#744210" },
+  infoBox:       { background: "#fffbeb", border: "1px solid #f6e05e", borderRadius: "6px", padding: "8px 12px", fontSize: "12px", color: "#744210" },
 };
