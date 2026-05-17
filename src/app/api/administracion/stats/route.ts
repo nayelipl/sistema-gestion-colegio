@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verificarPermiso } from "@/lib/auth-helper";
+
+const ROLES_VER = ["ADMINISTRADOR", "DIRECCION_ACADEMICA", "COORDINACION_ACADEMICA"];
 
 export async function GET() {
+  const permiso = await verificarPermiso(ROLES_VER);
+  if (permiso.error)
+    return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const [empleados, tutores, estudiantes, secciones, asignaturas, matriculas] = await Promise.all([
       prisma.empleado.count(),

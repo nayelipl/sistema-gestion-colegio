@@ -660,7 +660,7 @@ model CalendarioEscolar {
   descripcion String?
   fechaInicio DateTime
   fechaFin    DateTime
-  tipo        String   // "INICIO_CLASES", "FIN_CLASES", "FERIADO", "EXAMEN", "ACTIVIDAD", "RECESO", "OTRO"
+  tipo        String   // "INICIO_CLASES", "FIN_CLASES", "FERIADO", "EXAMEN", "ACTIVIDAD", "RECESO", "OTRO", "ENTREGA_P1", "ENTREGA_P2", "ENTREGA_P3", "ENTREGA_P4"
   anio        String
   publicado   Boolean  @default(false)
   creadoEn    DateTime @default(now())

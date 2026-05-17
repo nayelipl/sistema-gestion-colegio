@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verificarPermiso } from "@/lib/auth-helper";
+
+const ROLES_ESCRITURA = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA"];
 
 export async function GET() {
   try {
-    const asignaturas = await prisma.asignatura.findMany({ 
+    const asignaturas = await prisma.asignatura.findMany({
       orderBy: { nombre: "asc" }
     });
     return NextResponse.json({ asignaturas });
@@ -13,6 +16,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const permiso = await verificarPermiso(ROLES_ESCRITURA);
+  if (permiso.error) return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const { codigo, nombre } = await req.json();
     if (!codigo || !nombre) {

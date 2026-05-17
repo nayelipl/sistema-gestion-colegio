@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verificarPermiso } from "@/lib/auth-helper";
+
+const ROLES_ESCRIBIR = ["ADMINISTRADOR"];
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const permiso = await verificarPermiso(ROLES_ESCRIBIR);
+  if (permiso.error)
+    return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const { id: rawId } = await params;
     const id   = parseInt(rawId);
@@ -29,6 +36,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const permiso = await verificarPermiso(ROLES_ESCRIBIR);
+  if (permiso.error)
+    return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const { id: rawId } = await params;
     const id         = parseInt(rawId);

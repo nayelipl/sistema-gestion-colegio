@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
 
 const ROLES_GESTION = ["ADMINISTRADOR", "DIRECCION_ACADEMICA"];
-const TIPOS = ["INICIO_CLASES","FIN_CLASES","FERIADO","EXAMEN","ACTIVIDAD","RECESO","OTRO"];
+const TIPOS = ["INICIO_CLASES","FIN_CLASES","FERIADO","EXAMEN","ACTIVIDAD","RECESO","ENTREGA_P1","ENTREGA_P2","ENTREGA_P3","ENTREGA_P4","OTRO"];
 const TIPO_COLOR: Record<string, React.CSSProperties> = {
   INICIO_CLASES: { background:"#f0fff4", color:"#276749", border:"1px solid #9ae6b4" },
   FIN_CLASES:    { background:"#fff5f5", color:"#c53030", border:"1px solid #fed7d7" },
@@ -14,6 +14,10 @@ const TIPO_COLOR: Record<string, React.CSSProperties> = {
   ACTIVIDAD:     { background:"#EBF8FF", color:"#2b6cb0", border:"1px solid #bee3f8" },
   RECESO:        { background:"#FAF5FF", color:"#553c9a", border:"1px solid #d6bcfa" },
   OTRO:          { background:"#f0f0f0", color:"#555",    border:"1px solid #ddd" },
+  ENTREGA_P1:    { background:"#F0FFF4", color:"#276749", border:"1px solid #9AE6B4" },
+  ENTREGA_P2:    { background:"#EBF8FF", color:"#2B6CB0", border:"1px solid #BEE3F8" },
+  ENTREGA_P3:    { background:"#FAF5FF", color:"#553C9A", border:"1px solid #D6BCFA" },
+  ENTREGA_P4:    { background:"#FFF5F5", color:"#C53030", border:"1px solid #FED7D7" },
 };
 
 type Evento = {
