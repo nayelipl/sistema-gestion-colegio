@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
 
 const PERIODOS = ["P1", "P2", "P3", "P4"];
-const ROLES_VER = ["ADMINISTRADOR", "DIRECCION_ACADEMICA", "COORDINACION_ACADEMICA", "SECRETARIA_DOCENTE", "MAESTRO"];
+const ROLES_VER       = ["ADMINISTRADOR", "DIRECCION_ACADEMICA", "COORDINACION_ACADEMICA", "SECRETARIA_DOCENTE", "MAESTRO"];
 const ROLES_REGISTRAR = ["ADMINISTRADOR", "SECRETARIA_DOCENTE", "MAESTRO"];
 const ROLES_PUBLICAR  = ["ADMINISTRADOR", "SECRETARIA_DOCENTE"];
 
@@ -25,21 +25,21 @@ type Calificacion = {
 export default function CalificacionesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [secciones, setSecciones]       = useState<Seccion[]>([]);
-  const [asignaturas, setAsignaturas]   = useState<Asignatura[]>([]);
-  const [estudiantes, setEstudiantes]   = useState<Estudiante[]>([]);
+  const [secciones, setSecciones]           = useState<Seccion[]>([]);
+  const [asignaturas, setAsignaturas]       = useState<Asignatura[]>([]);
+  const [estudiantes, setEstudiantes]       = useState<Estudiante[]>([]);
   const [calificaciones, setCalificaciones] = useState<Calificacion[]>([]);
-  const [seccionId, setSeccionId]       = useState("");
-  const [asignaturaId, setAsignaturaId] = useState("");
-  const [periodo, setPeriodo]           = useState("P1");
-  const [modal, setModal]               = useState(false);
-  const [form, setForm]                 = useState<any>({});
-  const [error, setError]               = useState("");
-  const [exito, setExito]               = useState("");
-  const [cargando, setCargando]         = useState(true);
+  const [seccionId, setSeccionId]           = useState("");
+  const [asignaturaId, setAsignaturaId]     = useState("");
+  const [periodoModal, setPeriodoModal]     = useState("P1");
+  const [modal, setModal]                   = useState(false);
+  const [estudianteSel, setEstudianteSel]   = useState<Estudiante | null>(null);
+  const [form, setForm]                     = useState<any>({});
+  const [error, setError]                   = useState("");
+  const [exito, setExito]                   = useState("");
+  const [cargando, setCargando]             = useState(true);
 
-  const rol   = (session?.user as any)?.role ?? "";
-  const email = session?.user?.email ?? "";
+  const rol = (session?.user as any)?.role ?? "";
 
   useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
 
@@ -57,16 +57,18 @@ export default function CalificacionesPage() {
 
   useEffect(() => {
     if (!seccionId) { setEstudiantes([]); setCalificaciones([]); return; }
-    fetch(`/api/usuarios?seccionId=${seccionId}`).then(r => r.json()).then(d => setEstudiantes(d.estudiantes || []));
-    cargarCalificaciones();
-  }, [seccionId, asignaturaId, periodo]);
+    cargarDatos();
+  }, [seccionId, asignaturaId]);
 
-  const cargarCalificaciones = async () => {
-    if (!seccionId) return;
-    let url = `/api/calificaciones?seccionId=${seccionId}&periodo=${periodo}`;
+  const cargarDatos = async () => {
+    let url = `/api/calificaciones?seccionId=${seccionId}`;
     if (asignaturaId) url += `&asignaturaId=${asignaturaId}`;
-    const data = await fetch(url).then(r => r.json());
-    setCalificaciones(data.calificaciones || []);
+    const [resEst, resCalif] = await Promise.all([
+      fetch(`/api/usuarios?seccionId=${seccionId}`).then(r => r.json()),
+      fetch(url).then(r => r.json()),
+    ]);
+    setEstudiantes(resEst.estudiantes || []);
+    setCalificaciones(resCalif.calificaciones || []);
   };
 
   if (status === "loading" || cargando) return <div style={s.loading}>Cargando...</div>;
@@ -75,16 +77,27 @@ export default function CalificacionesPage() {
   const puedeRegistrar = ROLES_REGISTRAR.includes(rol);
   const puedePublicar  = ROLES_PUBLICAR.includes(rol);
 
-  const c = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
+  const getCalif = (estudianteId: number, periodo: string) => {
+    const est = estudiantes.find(e => e.id === estudianteId);
+    if (!est) return null;
+    const asigActual = asignaturas.find(a => String(a.id) === asignaturaId);
+    return calificaciones.find(c =>
+      c.estudiante?.codigo === est.codigo &&
+      c.periodo === periodo &&
+      (!asignaturaId || c.asignatura?.codigo === asigActual?.codigo)
+    ) || null;
+  };
 
-  const abrirModal = (est: Estudiante) => {
-    const calif = calificaciones.find(c => c.estudiante.codigo === est.codigo && c.asignatura?.codigo === asignaturas.find(a => String(a.id) === asignaturaId)?.codigo);
+  const abrirModal = (est: Estudiante, periodo: string) => {
+    const c = getCalif(est.id, periodo);
+    setPeriodoModal(periodo);
+    setEstudianteSel(est);
     setForm({
       estudianteId: est.id, asignaturaId, seccionId, periodo,
-      prueba1: calif?.prueba1 ?? "", prueba2: calif?.prueba2 ?? "",
-      prueba3: calif?.prueba3 ?? "", prueba4: calif?.prueba4 ?? "",
-      practica1: calif?.practica1 ?? "", practica2: calif?.practica2 ?? "",
-      trabajoFinal: calif?.trabajoFinal ?? "", asistencia: calif?.asistencia ?? "",
+      prueba1: c?.prueba1 ?? "", prueba2: c?.prueba2 ?? "",
+      prueba3: c?.prueba3 ?? "", prueba4: c?.prueba4 ?? "",
+      practica1: c?.practica1 ?? "", practica2: c?.practica2 ?? "",
+      trabajoFinal: c?.trabajoFinal ?? "", asistencia: c?.asistencia ?? "",
     });
     setModal(true);
     setError("");
@@ -98,16 +111,16 @@ export default function CalificacionesPage() {
     if (!res.ok) { setError(data.error); return; }
     setExito(data.mensaje);
     setModal(false);
-    cargarCalificaciones();
+    cargarDatos();
     setTimeout(() => setExito(""), 3000);
   };
 
-  const publicar = async (id: number, publicar: boolean) => {
-    const res  = await fetch("/api/calificaciones", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, publicar }) });
+  const publicar = async (id: number, pub: boolean) => {
+    const res  = await fetch("/api/calificaciones", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, publicar: pub }) });
     const data = await res.json();
     if (!res.ok) { setError(data.error); return; }
     setExito(data.mensaje);
-    cargarCalificaciones();
+    cargarDatos();
     setTimeout(() => setExito(""), 3000);
   };
 
@@ -116,11 +129,14 @@ export default function CalificacionesPage() {
     for (const c of sinPublicar) await publicar(c.id, true);
   };
 
-  const calif = (estudianteId: number) => calificaciones.find(c => {
-    const asigActual = asignaturas.find(a => String(a.id) === asignaturaId);
-    return c.estudiante && estudiantes.find(e => e.id === estudianteId)?.codigo === c.estudiante.codigo
-      && (!asignaturaId || c.asignatura?.codigo === asigActual?.codigo);
-  });
+  // Determinar qué períodos tienen datos
+  const periodosConDatos = PERIODOS.filter(p =>
+    calificaciones.some(c => c.periodo === p)
+  );
+  const periodosAMostrar = periodosConDatos.length > 0 ? periodosConDatos : PERIODOS;
+  const mostrarCondicion = periodosAMostrar.includes("P4");
+
+  const c = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
 
   return (
     <main style={s.main}>
@@ -129,7 +145,7 @@ export default function CalificacionesPage() {
         <div style={s.header}>
           <div>
             <h1 style={s.titulo}>Registro de Calificaciones</h1>
-            <p style={s.subtitulo}>Basado en: Pruebas 50% · Prácticas 15% · Trabajo Final 20% · Asistencia 15%</p>
+            <p style={s.subtitulo}>Pruebas 50% · Prácticas 15% · Trabajo Final 20% · Asistencia 15%</p>
           </div>
           {puedePublicar && calificaciones.some(c => !c.publicado) && (
             <button onClick={publicarTodas} style={s.btnPublicar}>📢 Publicar todas</button>
@@ -137,7 +153,7 @@ export default function CalificacionesPage() {
         </div>
 
         {exito && <div style={s.exitoMsg}>✅ {exito}</div>}
-        {error && <div style={s.errorMsg}>⚠️ {error}</div>}
+        {error  && <div style={s.errorMsg}>⚠️ {error}</div>}
 
         <div style={s.filtros}>
           <div>
@@ -156,12 +172,6 @@ export default function CalificacionesPage() {
               {asignaturas.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
             </select>
           </div>
-          <div>
-            <label style={s.label}>Período</label>
-            <select value={periodo} onChange={e => setPeriodo(e.target.value)} style={s.select}>
-              {PERIODOS.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
         </div>
 
         {!seccionId ? (
@@ -171,70 +181,73 @@ export default function CalificacionesPage() {
             <table style={s.tabla}>
               <thead>
                 <tr style={s.theadRow}>
-                  <th style={s.th}>Estudiante</th>
-                  <th style={s.th}>P1</th><th style={s.th}>P2</th><th style={s.th}>P3</th><th style={s.th}>P4</th>
-                  <th style={{...s.th, background:"#2D6A9F"}}>Pruebas</th>
-                  <th style={s.th}>Pr1</th><th style={s.th}>Pr2</th>
-                  <th style={{...s.th, background:"#2D6A9F"}}>Prácticas</th>
-                  <th style={s.th}>T.Final</th>
-                  <th style={s.th}>Asist.</th>
-                  <th style={{...s.th, background:"#1a4a7a"}}>Nota Final</th>
-                  <th style={s.th}>Condición</th>
-                  <th style={s.th}>Estado</th>
+                  <th style={{...s.th, textAlign:"left", minWidth:"160px"}}>Estudiante</th>
+                  {periodosAMostrar.map(p => (
+                    <th key={p} style={{...s.th, background:"#3a2010", minWidth:"80px"}}>{p}</th>
+                  ))}
+                  {mostrarCondicion && <th style={{...s.th, background:"#1a4a7a", minWidth:"100px"}}>Condición Final</th>}
                   {(puedeRegistrar || puedePublicar) && <th style={s.th}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
                 {estudiantes.map((est, i) => {
-                  const c = calificaciones.find(cal => {
-                    const asigActual = asignaturas.find(a => String(a.id) === asignaturaId);
-                    return cal.estudiante?.codigo === est.codigo &&
-                      (!asignaturaId || cal.asignatura?.codigo === asigActual?.codigo);
-                  });
+                  const califsPorPeriodo = periodosAMostrar.map(p => getCalif(est.id, p));
+                  const califP4 = getCalif(est.id, "P4");
                   return (
                     <tr key={est.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa" }}>
-                      <td style={s.td}>{est.nombre} {est.apellido}<br/><span style={s.codigo}>{est.codigo}</span></td>
-                      <td style={s.tdNum}>{c?.prueba1 ?? "—"}</td>
-                      <td style={s.tdNum}>{c?.prueba2 ?? "—"}</td>
-                      <td style={s.tdNum}>{c?.prueba3 ?? "—"}</td>
-                      <td style={s.tdNum}>{c?.prueba4 ?? "—"}</td>
-                      <td style={{...s.tdNum, fontWeight:"bold", color:"#2C1810"}}>{c?.notaPruebas?.toFixed(2) ?? "—"}</td>
-                      <td style={s.tdNum}>{c?.practica1 ?? "—"}</td>
-                      <td style={s.tdNum}>{c?.practica2 ?? "—"}</td>
-                      <td style={{...s.tdNum, fontWeight:"bold", color:"#2C1810"}}>{c?.notaPracticas?.toFixed(2) ?? "—"}</td>
-                      <td style={s.tdNum}>{c?.trabajoFinal ?? "—"}</td>
-                      <td style={s.tdNum}>{c?.asistencia ?? "—"}</td>
-                      <td style={{...s.tdNum, fontWeight:"bold", fontSize:"15px", color: c?.notaFinal != null ? (c.notaFinal >= 6 ? "#276749" : "#c53030") : "#333"}}>
-                        {c?.notaFinal?.toFixed(2) ?? "—"}
-                      </td>
                       <td style={s.td}>
-                        {c ? (
-                          <span style={{ ...s.badge, background: c.condicion === "APROBADO" ? "#f0fff4" : "#fff5f5", color: c.condicion === "APROBADO" ? "#276749" : "#c53030", border: `1px solid ${c.condicion === "APROBADO" ? "#9ae6b4" : "#fed7d7"}` }}>
-                            {c.condicion}
-                          </span>
-                        ) : "—"}
+                        {est.nombre} {est.apellido}
+                        <br/><span style={s.codigo}>{est.codigo}</span>
                       </td>
-                      <td style={s.td}>
-                        {c ? (
-                          <span style={{ ...s.badge, background: c.publicado ? "#EBF8FF" : "#FFFBEB", color: c.publicado ? "#2B6CB0" : "#B7791F", border: `1px solid ${c.publicado ? "#BEE3F8" : "#F6E05E"}` }}>
-                            {c.publicado ? "Publicado" : "Pendiente"}
-                          </span>
-                        ) : "—"}
-                      </td>
+                      {periodosAMostrar.map((p, idx) => {
+                        const c = califsPorPeriodo[idx];
+                        return (
+                          <td key={p} style={s.tdNum}>
+                            {c ? (
+                              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"2px" }}>
+                                <strong style={{ color: c.notaFinal >= 6 ? "#276749" : "#c53030", fontSize:"15px" }}>
+                                  {c.notaFinal?.toFixed(2)}
+                                </strong>
+                                <span style={{ ...s.badge, ...(c.publicado
+                                  ? {background:"#EBF8FF", color:"#2B6CB0", fontSize:"9px"}
+                                  : {background:"#FFFBEB", color:"#B7791F", fontSize:"9px"}) }}>
+                                  {c.publicado ? "✓" : "⏳"}
+                                </span>
+                              </div>
+                            ) : (
+                              <span style={{ color:"#ccc" }}>—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      {mostrarCondicion && (
+                        <td style={s.td}>
+                          {califP4 ? (
+                            <span style={{ ...s.badge, background: califP4.condicion === "APROBADO" ? "#f0fff4" : "#fff5f5", color: califP4.condicion === "APROBADO" ? "#276749" : "#c53030", border: `1px solid ${califP4.condicion === "APROBADO" ? "#9ae6b4" : "#fed7d7"}` }}>
+                              {califP4.condicion === "APROBADO" ? "Promovido" : "No promovido"}
+                            </span>
+                          ) : "—"}
+                        </td>
+                      )}
                       {(puedeRegistrar || puedePublicar) && (
                         <td style={s.td}>
-                          <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
-                            {puedeRegistrar && asignaturaId && (
-                              <button onClick={() => abrirModal(est)} style={s.btnEditar}>
-                                {c ? "✏️ Editar" : "➕ Registrar"}
-                              </button>
-                            )}
-                            {puedePublicar && c && !c.publicado && (
-                              <button onClick={() => publicar(c.id, true)} style={s.btnPub}>📢 Publicar</button>
-                            )}
-                            {puedePublicar && c && c.publicado && (
-                              <button onClick={() => publicar(c.id, false)} style={s.btnDespub}>↩️ Despublicar</button>
-                            )}
+                          <div style={{ display:"flex", gap:"4px", flexWrap:"wrap" }}>
+                            {puedeRegistrar && asignaturaId && periodosAMostrar.map(p => {
+                              const c = getCalif(est.id, p);
+                              return (
+                                <button key={p} onClick={() => abrirModal(est, p)} style={s.btnEditar}>
+                                  {c ? `✏️ ${p}` : `➕ ${p}`}
+                                </button>
+                              );
+                            })}
+                            {puedePublicar && calificaciones
+                              .filter(c => c.estudiante?.codigo === estudiantes.find(e => e.id === est.id)?.codigo && !c.publicado)
+                              .map(c => (
+                                <button key={c.id} onClick={() => publicar(c.id, true)} style={s.btnPub}>
+                                  📢 {c.periodo}
+                                </button>
+                              ))
+                            }
                           </div>
                         </td>
                       )}
@@ -247,13 +260,13 @@ export default function CalificacionesPage() {
         )}
       </div>
 
-      {modal && (
+      {modal && estudianteSel && (
         <div style={s.overlay}>
           <div style={s.modalCard}>
-            <h2 style={s.modalTitulo}>Registrar Calificaciones — {periodo}</h2>
+            <h2 style={s.modalTitulo}>Calificaciones — {periodoModal}</h2>
             <p style={s.modalSub}>
-              {estudiantes.find(e => e.id === form.estudianteId)?.nombre} {estudiantes.find(e => e.id === form.estudianteId)?.apellido}
-              {" · "}{asignaturas.find(a => String(a.id) === asignaturaId)?.nombre}
+              {estudianteSel.nombre} {estudianteSel.apellido}
+              {asignaturaId && ` · ${asignaturas.find(a => String(a.id) === asignaturaId)?.nombre}`}
             </p>
             <form onSubmit={guardar}>
               <p style={s.secLabel}>Pruebas y Exámenes (peso 50%)</p>
@@ -322,9 +335,9 @@ const s: Record<string, React.CSSProperties> = {
   tdNum:      { padding:"8px 6px", fontSize:"13px", borderBottom:"1px solid #f0f0f0", textAlign:"center", verticalAlign:"middle" },
   codigo:     { fontSize:"11px", color:"#999" },
   badge:      { borderRadius:"12px", padding:"3px 10px", fontSize:"11px", fontWeight:"bold", whiteSpace:"nowrap" },
-  btnEditar:  { background:"#EBF3FB", color:"#2C1810", border:"none", borderRadius:"6px", padding:"5px 10px", fontSize:"12px", cursor:"pointer" },
-  btnPub:     { background:"#f0fff4", color:"#276749", border:"none", borderRadius:"6px", padding:"5px 10px", fontSize:"12px", cursor:"pointer" },
-  btnDespub:  { background:"#fff5f5", color:"#c53030", border:"none", borderRadius:"6px", padding:"5px 10px", fontSize:"12px", cursor:"pointer" },
+  btnEditar:  { background:"#EBF3FB", color:"#2C1810", border:"none", borderRadius:"6px", padding:"4px 8px", fontSize:"11px", cursor:"pointer" },
+  btnPub:     { background:"#f0fff4", color:"#276749", border:"none", borderRadius:"6px", padding:"4px 8px", fontSize:"11px", cursor:"pointer" },
+  btnDespub:  { background:"#fff5f5", color:"#c53030", border:"none", borderRadius:"6px", padding:"4px 8px", fontSize:"11px", cursor:"pointer" },
   overlay:    { position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 },
   modalCard:  { background:"#fff", borderRadius:"16px", padding:"32px", width:"100%", maxWidth:"560px", maxHeight:"90vh", overflowY:"auto" },
   modalTitulo:{ fontSize:"18px", fontWeight:"bold", color:"#2C1810", margin:"0 0 4px" },

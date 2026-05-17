@@ -6,7 +6,7 @@ import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Obtener ID desde la URL
@@ -18,8 +18,10 @@ export async function PUT(
     console.log("URL completa:", req.url);
     console.log("Pathname:", url.pathname);
     console.log("ID desde URL:", idFromUrl);
+    const { id: rawId } = await params;
+    const id = parseInt(rawId);
     console.log("Params recibido:", params);
-    console.log("Params.id:", params?.id);
+    console.log("Params.id:", id);
     
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -32,7 +34,6 @@ export async function PUT(
     }
 
     // Usar el ID desde la URL
-    const id = parseInt(idFromUrl);
     console.log("ID parseado:", id);
     
     if (isNaN(id)) {

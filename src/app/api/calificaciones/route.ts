@@ -65,6 +65,36 @@ export async function GET(req: NextRequest) {
       where.publicado = true;
     }
 
+    // Validacion de cuentas al dia para tutores
+    if (rol === "TUTOR") {
+      const periodoParam = searchParams.get("periodo");
+      if (periodoParam) {
+        const tipoBuscar = `ENTREGA_${periodoParam}`;
+        const fechaEntrega = await prisma.calendarioEscolar.findFirst({
+          where: { tipo: tipoBuscar, publicado: true },
+          orderBy: { fechaInicio: "desc" },
+        });
+        if (fechaEntrega) {
+          const tutor = await prisma.tutor.findUnique({ where: { email: email! } });
+          if (tutor) {
+            const cuentasPendientes = await prisma.cuentaPorCobrar.count({
+              where: {
+                tutorId: tutor.id,
+                estado: { in: ["PENDIENTE", "VENCIDA", "ABONADA"] },
+                fechaVencimiento: { lte: fechaEntrega.fechaInicio },
+              },
+            });
+            if (cuentasPendientes > 0) {
+              return NextResponse.json({
+                error: "No puedes ver las calificaciones porque tienes cuotas pendientes de pago.",
+                bloqueado: true,
+              }, { status: 403 });
+            }
+          }
+        }
+      }
+    }
+
     const calificaciones = await prisma.calificacion.findMany({
       where,
       orderBy: [{ periodo: "asc" }, { creadoEn: "desc" }],

@@ -17,10 +17,10 @@ export async function POST() {
     // Obtener la tarifa activa para conocer los días de gracia
     const tarifaActiva = await prisma.tarifaAnioEscolar.findFirst({
       where: { activo: true },
-      select: { diasGracia: true, anioEscolar: true }
+      select: { colegiaturaDiasGracia: true, anioEscolar: true }
     });
 
-    const diasGracia = tarifaActiva?.diasGracia || 0;
+    const diasGracia = tarifaActiva?.colegiaturaDiasGracia || 0;
     
     // Calcular fecha límite para considerar vencido: hoy - días de gracia
     const fechaLimiteVencimiento = new Date(hoy);
