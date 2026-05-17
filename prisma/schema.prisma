@@ -361,7 +361,7 @@ model ConfiguracionCuota {
 
   tarifaAnio TarifaAnioEscolar @relation(fields: [tarifaAnioId], references: [id])
 
-  @@unique([tarifaAnioId, numeroCuota])
+  @@unique([tarifaAnioId, tipo, numeroCuota])
   @@map("configuracion_cuotas")
 }
 

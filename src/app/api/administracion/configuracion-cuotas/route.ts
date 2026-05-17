@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { generarConfiguracionCuotas, type ConfiguracionCuota } from "@/lib/generar-cuotas";
+import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
 
 // Obtener configuración de cuotas
 export async function GET(req: NextRequest) {
@@ -35,7 +35,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Guardar configuración de cuotas
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -43,7 +42,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const { tarifaAnioId, tipo, cuotas } = await req.json();
+    const body = await req.json();
+    const { tarifaAnioId, tipo, cuotas } = body;
+
+    console.log("=== POST configuracion-cuotas ===");
+    console.log("tarifaAnioId:", tarifaAnioId, "tipo:", tipo);
+    console.log("cuotas:", JSON.stringify(cuotas, null, 2));
 
     if (!tarifaAnioId || !cuotas || cuotas.length === 0) {
       return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
@@ -51,26 +55,31 @@ export async function POST(req: NextRequest) {
 
     const tipoValido = tipo || "COLEGIATURA";
 
-    // Verificar que la tarifa existe
-    const tarifa = await prisma.tarifaAnioEscolar.findUnique({
-      where: { id: tarifaAnioId },
-    });
-
-    if (!tarifa) {
-      return NextResponse.json({ error: "Tarifa no encontrada" }, { status: 404 });
+    // Verificar duplicados en el array
+    const numeros = cuotas.map((c: any) => c.numero);
+    const numerosUnicos = new Set(numeros);
+    if (numeros.length !== numerosUnicos.size) {
+      console.error("DUPLICADOS EN EL ARRAY:", numeros);
+      return NextResponse.json({ 
+        error: "Números de cuota duplicados en la petición",
+        detalles: numeros 
+      }, { status: 400 });
     }
 
-    // Eliminar configuraciones existentes
-    await prisma.configuracionCuota.deleteMany({
+    // 1. Eliminar existentes
+    const deleted = await prisma.configuracionCuota.deleteMany({
       where: {
         tarifaAnioId: tarifaAnioId,
         tipo: tipoValido,
       },
     });
+    console.log(`Eliminados ${deleted.count} registros`);
 
-    // Crear nuevas configuraciones
-    const datosCrear = cuotas.map((cuota : any) => {
-      const fechaVencimiento = new Date(cuota.anio, cuota.mes - 1, cuota.dia);
+    // 2. Insertar nuevos
+    const datosCrear = cuotas.map((cuota: any) => {
+      const fechaStr = `${cuota.anio}-${String(cuota.mes).padStart(2, '0')}-${String(cuota.dia).padStart(2, '0')}`;
+      const { fechaDesde } = ajustarFechasAPI(fechaStr, undefined);
+      const fechaVencimiento = fechaDesde || new Date(cuota.anio, cuota.mes - 1, cuota.dia);
       
       return {
         tarifaAnioId: tarifaAnioId,
@@ -83,46 +92,25 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    const configuraciones = await prisma.configuracionCuota.createMany({
+    console.log("Intentando insertar:", datosCrear.map((d: any)=>`${d.numeroCuota}: ${d.anio}-${d.mes}-${d.diaVencimiento}`));
+
+    const result = await prisma.configuracionCuota.createMany({
       data: datosCrear,
     });
 
+    console.log(`Insertados ${result.count} registros`);
+
     return NextResponse.json({
       mensaje: `Configuración de ${tipoValido === "COLEGIATURA" ? "colegiatura" : "transporte"} guardada exitosamente`,
-      cantidad: configuraciones.count,
+      cantidad: result.count,
     }, { status: 201 });
   } catch (error) {
     console.error("Error POST /api/administracion/configuracion-cuotas:", error);
-    return NextResponse.json({ error: "Error al guardar configuración" }, { status: 500 });
-  }
-}
-
-// Eliminar configuración de cuotas
-export async function DELETE(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any)?.role !== "ADMINISTRADOR") {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const tarifaAnioId = searchParams.get("tarifaAnioId");
-    const tipo = searchParams.get("tipo") || "COLEGIATURA";
-
-    if (!tarifaAnioId) {
-      return NextResponse.json({ error: "Se requiere tarifaAnioId" }, { status: 400 });
-    }
-
-    await prisma.configuracionCuota.deleteMany({
-      where: {
-        tarifaAnioId: parseInt(tarifaAnioId),
-        tipo: tipo,
-      },
-    });
-
-    return NextResponse.json({ mensaje: "Configuración eliminada" });
-  } catch (error) {
-    console.error("Error DELETE /api/administracion/configuracion-cuotas:", error);
-    return NextResponse.json({ error: "Error al eliminar configuración" }, { status: 500 });
+    // Enviar el error completo
+    return NextResponse.json({ 
+      error: "Error al guardar configuración",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    }, { status: 500 });
   }
 }
