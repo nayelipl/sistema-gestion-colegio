@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     let tutorIdFinal: number | null = null;
 
-    // Caso 1: Se especificó un tutorId en la URL (admin/contador/cajero viendo un tutor específico)
+    // Caso 1: se especificó un tutorId en la URL (admin/contador/cajero viendo un tutor específico)
     if (tutorId) {
       tutorIdFinal = parseInt(tutorId);
       
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "No tiene permisos para ver este estado de cuenta" }, { status: 403 });
       }
     } 
-    // Caso 2: No se especificó tutorId, intentar obtener del usuario logueado
+    // Caso 2: no se especificó tutorId, intentar obtener del usuario logueado
     else {
       // Buscar tutor por email
       const tutor = await prisma.tutor.findFirst({
@@ -53,26 +54,50 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const { fechaDesde: fechaInicio, fechaHasta: fechaFin } = ajustarFechasAPI(
+      fechaDesde || undefined,
+      fechaHasta || undefined
+    );
+
+    // Obtener IDs de recibos que son de otros ingresos, no tienen cargos asociados
+    const recibosOtrosIngresos = await prisma.reciboPago.findMany({
+      where: {
+        tutorId: tutorIdFinal,
+        pagos: { none: {} }, // No tiene pagos de cargos
+        concepto: { in: ["EXCURSIÓN ESCOLAR", "OTRO", "DERECHO A GRADUACIÓN"] }
+      },
+      select: { id: true }
+    });
+
+    const idsRecibosExcluir = recibosOtrosIngresos.map(r => r.id);
+
     // Filtros
     const where: any = { tutorId: tutorIdFinal };
-    
-    if (fechaDesde) {
-      where.fecha = { ...where.fecha, gte: new Date(fechaDesde) };
+
+    // Excluir movimientos relacionados con otros ingresos
+    if (idsRecibosExcluir.length > 0) {
+      where.NOT = {
+        relacionId: { in: idsRecibosExcluir }
+      };
     }
-    if (fechaHasta) {
-      where.fecha = { ...where.fecha, lte: new Date(fechaHasta) };
+
+    if (fechaInicio) {
+      where.fecha = { gte: fechaInicio };
+    }
+    if (fechaFin) {
+      where.fecha = { ...where.fecha, lte: fechaFin };
     }
     if (tipo && tipo !== "TODOS" && tipo !== "INSCRIPCION") {
       where.tipo = tipo;
     }
 
-    const movimientos = await prisma.movimientoContable.findMany({
+    // Obtener los movimientos contables
+    let movimientos = await prisma.movimientoContable.findMany({
       where,
       include: {
-        estudiante: {
-          select: {
-            id: true,
-            nombre: true,
+        estudiante: { 
+          select: { 
+            nombre: true, 
             apellido: true,
             codigo: true,
           },
@@ -81,13 +106,20 @@ export async function GET(req: NextRequest) {
       orderBy: [{ fecha: "asc" }, { hora: "asc" }],
     });
 
-    const tutor = await prisma.tutor.findUnique({
-      where: { id: tutorIdFinal },
-    });
+    // Filtrar movimientos y recalcular totales
+    const movimientosFiltrados = movimientos.filter(m => 
+      !idsRecibosExcluir.includes(m.relacionId || 0)
+    );
 
-    const totalDebito = movimientos.reduce((sum, m) => sum + Number(m.debito), 0);
-    const totalCredito = movimientos.reduce((sum, m) => sum + Number(m.credito), 0);
-    const balanceFinal = movimientos.length > 0 ? Number(movimientos[movimientos.length - 1].balance) : 0;
+    const totalDebito = movimientosFiltrados.reduce((sum, m) => sum + Number(m.debito), 0);
+    const totalCredito = movimientosFiltrados.reduce((sum, m) => sum + Number(m.credito), 0);
+    const balanceFinal = movimientosFiltrados.length > 0 
+      ? Number(movimientosFiltrados[movimientosFiltrados.length - 1].balance) 
+      : 0;
+
+    const tutor = await prisma.tutor.findUnique({
+      where: { id: tutorIdFinal as number },
+    });
 
     const movimientosFormateados = movimientos.map(m => ({
         ...m,
@@ -98,6 +130,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
     tutor: tutor ? {
+        id: tutor.id,
         cuentaNo: tutor.cuentaNo,
         nombre: tutor.nombre,
         apellido: tutor.apellido,

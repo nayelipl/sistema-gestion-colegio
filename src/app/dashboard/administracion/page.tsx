@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 export default function AdministracionPage() {
   const { data: session, status } = useSession();
@@ -46,12 +47,7 @@ export default function AdministracionPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>⚙️ Administración del Sistema</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Administración" icono="⚙️" userName={session?.user?.name} />
       <div style={s.contenido}>
         <h1 style={s.titulo}>Administración del Sistema</h1>
         <p style={s.subtitulo}>Configuración general, estadísticas y gestión del año escolar</p>

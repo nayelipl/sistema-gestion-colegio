@@ -146,11 +146,11 @@ export default function InventarioPage() {
             <span style={s.resValor}>{uniformes.reduce((s, u) => s + u.stock, 0)}</span>
             <span style={s.resLabel}>Unidades en stock</span>
           </div>
-          <div style={{...s.resCard, borderColor:"#fed7d7"}}>
+          <div style={{...s.resCard, border:"1px solid #fed7d7"}}>
             <span style={{...s.resValor, color:"#c53030"}}>{uniformes.filter(u => u.stock <= u.stockMinimo).length}</span>
             <span style={s.resLabel}>Stock bajo</span>
           </div>
-          <div style={{...s.resCard, borderColor:"#9ae6b4"}}>
+          <div style={{...s.resCard, border:"1px solid #9ae6b4"}}>
             <span style={{...s.resValor, color:"#276749"}}>{fmt(totalVentas)}</span>
             <span style={s.resLabel}>Total vendido</span>
           </div>

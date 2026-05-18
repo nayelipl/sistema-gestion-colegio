@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AsyncSelect from "react-select/async";
 import { calcularEdadDisplay } from "@/lib/calcular-edad";
+import NavBar from "@/components/NavBar";
 
 type Tutor = {
   id: number; 
@@ -23,11 +24,11 @@ export default function InscripcionesPage() {
   const { data: session, status } = useSession();
   const router  = useRouter();
 
-  const [tab, setTab]         = useState<Tab>("tutor");
-  const [form, setForm]       = useState<any>({});
+  const [tab, setTab] = useState<Tab>("tutor");
+  const [form, setForm] = useState<any>({});
   const [tutores, setTutores] = useState<Tutor[]>([]);
-  const [error, setError]     = useState("");
-  const [exito, setExito]     = useState("");
+  const [error, setError] = useState("");
+  const [exito, setExito] = useState("");
   const [cargando, setCargando] = useState(false);
   const [esNuevo, setEsNuevo] = useState(true);
   const [tutorSeleccionado, setTutorSeleccionado] = useState<any>(null);
@@ -148,12 +149,7 @@ export default function InscripcionesPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>📋 Inscripciones</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Inscripciones" icono="📋" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <h1 style={s.titulo}>Inscripciones</h1>
@@ -161,11 +157,11 @@ export default function InscripcionesPage() {
         </div>
 
         <div style={s.tabs}>
-          <button onClick={() => { setTab("tutor"); setForm({}); setError(""); setExito(""); }}
+          <button onClick={() => { setTab("tutor"); setForm({}); setError(""); setExito(""); setTutorSeleccionado(null); }}
             style={{ ...s.tab, ...(tab === "tutor" ? s.tabActivo : {}) }}>
             👨‍👧 Registrar Tutor
           </button>
-          <button onClick={() => { setTab("estudiante"); setForm({}); setError(""); setExito(""); }}
+          <button onClick={() => { setTab("estudiante"); setForm({}); setError(""); setExito(""); setTutorSeleccionado(null); }}
             style={{ ...s.tab, ...(tab === "estudiante" ? s.tabActivo : {}) }}>
             🎒 Registrar Estudiante
           </button>
@@ -179,7 +175,7 @@ export default function InscripcionesPage() {
           {exito && (
             <div style={s.exito}>
               ✅ {exito}
-              <button onClick={() => setExito("")} style={s.btnNuevo}>+ Registrar otro</button>
+              <button onClick={() => {setExito(""); setTutorSeleccionado(null); }} style={s.btnNuevo}>+ Registrar otro</button>
             </div>
           )}
 
@@ -203,7 +199,7 @@ export default function InscripcionesPage() {
                       </div>
                       
                       <Campo label="Número de documento *" name="numeroDocIdentidad" value={form.numeroDocIdentidad} onChange={c} required />
-                      <Campo label="Ocupación" name="ocupacion" value={form.ocupacion} onChange={c} />
+                      <Campo label="Ocupación *" name="ocupacion" value={form.ocupacion} onChange={c} />
                     </div>
                   </div>
 
@@ -220,7 +216,7 @@ export default function InscripcionesPage() {
                   <div style={s.seccionFormulario}>
                     <h3 style={s.seccionTitulo}>🆘 Contacto de Emergencia</h3>
                     <div style={s.grid}>
-                      <Campo label="Nombre de contacto alterno" name="nombreContactoAlterno" value={form.nombreContactoAlterno} onChange={c} />
+                      <Campo label="Nombre de contacto alterno *" name="nombreContactoAlterno" value={form.nombreContactoAlterno} onChange={c} />
                       <Campo label="Teléfono de contacto alterno" name="telefonoContactoAlterno" value={form.telefonoContactoAlterno} onChange={c} placeholder="809-000-0000" />
                     </div>
                   </div>
@@ -278,7 +274,7 @@ export default function InscripcionesPage() {
                               ...base, 
                               padding: "4px", 
                               borderRadius: "7px", 
-                              borderColor: "#ddd",
+                              border: "1px solid #ddd",
                               minHeight: "42px"
                             }),
                             menu: (base) => ({ ...base, zIndex: 9999 }),
@@ -293,7 +289,7 @@ export default function InscripcionesPage() {
                       </div>
                       
                       <div>
-                        <label style={s.label}>Parentesco *</label>
+                        <label style={s.label}>Parentesco Tutor *</label>
                         <select name="parentesco" value={form.parentesco || ""} onChange={c} style={s.input} required>
                           <option value="">Seleccionar</option>
                           <option value="PADRE">Padre</option>
@@ -471,7 +467,7 @@ const s: Record<string, React.CSSProperties> = {
   subtitulo:  { fontSize: "13px", color: "#666", margin: 0 },
   tabs:       { display: "flex", gap: "8px", marginBottom: "20px" },
   tab:        { flex: 1, padding: "12px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "14px", fontWeight: "600", color: "#666" },
-  tabActivo:  { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo:  { color: "#2C1810", background: "#EBF3FB" },
   card:       { background: "#fff", borderRadius: "12px", padding: "28px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
   cardTitulo: { fontSize: "16px", fontWeight: "bold", color: "#2C1810", margin: "0 0 20px" },
   grid:       { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" },

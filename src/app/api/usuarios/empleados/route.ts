@@ -1,34 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verificarPermiso } from "@/lib/auth-helper";
 import bcrypt from "bcryptjs";
 
+const ROLES_VER      = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA","SECRETARIA_DOCENTE","MAESTRO","CAJERO","ORIENTADOR_ESCOLAR"];
+const ROLES_ESCRIBIR = ["ADMINISTRADOR"];
+
 export async function GET() {
+  const permiso = await verificarPermiso(ROLES_VER);
+  if (permiso.error)
+    return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const empleados = await prisma.empleado.findMany({
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        email: true,
-      },
+      select: { id: true, nombre: true, apellido: true, email: true },
       orderBy: { nombre: "asc" },
     });
 
     const empleadosConRol = await Promise.all(
       empleados.map(async (emp) => {
         const usuario = await prisma.usuario.findUnique({
-          where: { email: emp.email },
-          select: { rol: true }
+          where:  { email: emp.email },
+          select: { rol: true },
         });
-        return {
-          id: emp.id,
-          nombre: emp.nombre,
-          apellido: emp.apellido,
-          rol: usuario?.rol || null
-        };
+        return { id: emp.id, nombre: emp.nombre, apellido: emp.apellido, rol: usuario?.rol || null };
       })
     );
-    
+
     return NextResponse.json(empleadosConRol);
   } catch (error) {
     console.error("Error GET /api/usuarios/empleados:", error);
@@ -37,20 +35,24 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const permiso = await verificarPermiso(ROLES_ESCRIBIR);
+  if (permiso.error)
+    return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const { nombre, apellido, cedula, email, telefono, salario, rol } = await req.json();
-
-    if (!nombre || !apellido || !cedula || !email || !rol) {
+    if (!nombre || !apellido || !cedula || !email || !rol)
       return NextResponse.json({ error: "Todos los campos obligatorios deben completarse." }, { status: 400 });
-    }
 
     const existeEmpleado = await prisma.empleado.findFirst({
       where: { OR: [{ cedula }, { email }] },
     });
-    if (existeEmpleado) return NextResponse.json({ error: "Ya existe un empleado con esa cédula o correo." }, { status: 409 });
-    
+    if (existeEmpleado)
+      return NextResponse.json({ error: "Ya existe un empleado con esa cédula o correo." }, { status: 409 });
+
     const existeUsuario = await prisma.usuario.findUnique({ where: { email } });
-    if (existeUsuario) return NextResponse.json({ error: "Ya existe un usuario con ese correo." }, { status: 409 });
+    if (existeUsuario)
+      return NextResponse.json({ error: "Ya existe un usuario con ese correo." }, { status: 409 });
 
     const contrasenaTemp = `${apellido.slice(0, 4).toLowerCase()}${cedula.slice(-4)}`;
     const hash = await bcrypt.hash(contrasenaTemp, 10);
@@ -64,12 +66,7 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({
-      mensaje: `Empleado registrado exitosamente.`,
-      contrasenaTemp,
-      empleado,
-    }, { status: 201 });
-
+    return NextResponse.json({ mensaje: "Empleado registrado exitosamente.", contrasenaTemp, empleado }, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });

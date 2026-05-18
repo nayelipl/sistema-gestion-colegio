@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Notificacion = { id: number; titulo: string; contenido: string; tipo: string; creadoEn: string };
 
@@ -29,11 +30,7 @@ export default function NotificacionesPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>🔔 Notificaciones</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
+      <NavBar titulo="Notificaciones" icono="🔔" userName={session?.user?.name} />
       <div style={s.contenido}>
         <h1 style={s.titulo}>Centro de Notificaciones</h1>
         <p style={s.subtitulo}>Comunicados y recordatorios del colegio</p>

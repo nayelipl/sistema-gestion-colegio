@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Calificacion = {
   id: number; periodo: string; notaFinal: number; condicion: string; publicado: boolean;
@@ -47,12 +48,7 @@ export default function RendimientoPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>📊 Mi Rendimiento</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Mi Rendimiento" icono="📊" userName={session?.user?.name} />
       <div style={s.contenido}>
         <h1 style={s.titulo}>Mi Rendimiento Académico</h1>
         <p style={s.subtitulo}>Tus calificaciones publicadas por período</p>

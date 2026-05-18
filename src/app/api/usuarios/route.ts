@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { verificarPermiso } from "@/lib/auth-helper";
+
+const ROLES_VER = [
+  "ADMINISTRADOR", "CAJERO", "SECRETARIA_DOCENTE",
+  "DIRECCION_ACADEMICA", "COORDINACION_ACADEMICA",
+  "ORIENTADOR_ESCOLAR", "MAESTRO",
+];
 
 export async function GET() {
+  const permiso = await verificarPermiso(ROLES_VER);
+  if (permiso.error)
+    return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const [empleadosRaw, tutores, estudiantes] = await Promise.all([
       prisma.empleado.findMany({

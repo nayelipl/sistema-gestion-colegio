@@ -63,10 +63,17 @@ const MODULOS = [
     roles:  ["ADMINISTRADOR"],
   },
   {
-    nombre: "Módulo Financiero",
-    icono:  "💰",
-    desc:   "Cuentas por cobrar e inventario.",
-    href:   "/dashboard/financiero",
+    nombre: "Horario Escolar",
+    icono:  "📅",
+    desc:   "Registro y publicación del horario por sección.",
+    href:   "/dashboard/horario",
+    roles:  ["ADMINISTRADOR"],
+  },
+  {
+    nombre: "Calendario Escolar",
+    icono:  "🗓️",
+    desc:   "Consulta del calendario escolar.",
+    href:   "/dashboard/calendario",
     roles:  ["ADMINISTRADOR"],
   },
   {
@@ -105,6 +112,27 @@ const MODULOS = [
     roles: ["ADMINISTRADOR"],
   },
   {
+  nombre: "Cobro de Otros Ingresos",
+  icono: "💰",
+  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+  href: "/dashboard/financiero/cobro-otros-ingresos",
+  roles: ["ADMINISTRADOR"],
+  },
+/*  {
+    nombre: "Reporte de Ingresos",
+    icono: "📊",
+    desc: "Cuadre de Caja Grande y reportes de ingresos.",
+    href: "/dashboard/financiero/reporte-ingresos",
+    roles: ["ADMINISTRADOR"],
+  },*/
+  /*{
+    nombre: "Caja Chica",
+    icono: "💰",
+    desc: "Gestión de desembolsos y cuadre de caja chica.",
+    href: "/dashboard/financiero/caja-chica",
+    roles: ["ADMINISTRADOR"],
+  },*/
+  {
     nombre: "Comunicaciones",
     icono:  "📢",
     desc:   "Blog, materiales y comunicados.",
@@ -136,13 +164,7 @@ const MODULOS = [
   },
 
   // ── CONTADOR ───────────────────────────────────────────
-  {
-    nombre: "Módulo Financiero",
-    icono:  "💰",
-    desc:   "Cuentas por cobrar, corte de pagos e inventario de uniformes.",
-    href:   "/dashboard/financiero",
-    roles:  ["CONTADOR"],
-  },
+  
   {
     nombre: "Transporte Escolar",
     icono:  "🚌",
@@ -165,12 +187,34 @@ const MODULOS = [
   roles: ["CONTADOR"],
   },
   {
+  nombre: "Cobro de Otros Ingresos",
+  icono: "💰",
+  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+  href: "/dashboard/financiero/cobro-otros-ingresos",
+  roles: ["CONTADOR"],
+  },
+  {
     nombre: "Cuentas por Cobrar",
     icono: "📊",
     desc: "Control de deudores y cargos pendientes",
     href: "/dashboard/financiero/cuentas-por-cobrar",
     roles: ["CONTADOR"],
-  },
+  },/*
+  {
+    nombre: "Reporte de Ingresos",
+    icono: "📊",
+    desc: "Cuadre de Caja Grande y reportes de ingresos.",
+    href: "/dashboard/financiero/reporte-ingresos",
+    roles: ["CONTADOR"],
+  },*/
+ /* {
+    nombre: "Caja Chica",
+    icono: "💰",
+    desc: "Gestión de desembolsos y cuadre de caja chica.",
+    href: "/dashboard/financiero/caja-chica",
+    roles: ["CONTADOR"],
+  },*/
+  
   // ── CAJERO ─────────────────────────────────────────────
   {
     nombre: "Inscripciones",
@@ -207,6 +251,20 @@ const MODULOS = [
   href: "/dashboard/financiero/cobro-cargos",
   roles: ["CAJERO"],
   },
+  {
+  nombre: "Cobro de Otros Ingresos",
+  icono: "💰",
+  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+  href: "/dashboard/financiero/cobro-otros-ingresos",
+  roles: ["CAJERO"],
+  },/*
+  {
+    nombre: "Caja Chica",
+    icono: "💰",
+    desc: "Gestión de desembolsos y cuadre de caja chica.",
+    href: "/dashboard/financiero/caja-chica",
+    roles: ["CAJERO"],
+  },*/
 
   // ── DIRECCIÓN ACADÉMICA ────────────────────────────────
   {
@@ -239,8 +297,6 @@ const MODULOS = [
     href:   "/dashboard/academico",
     roles:  ["COORDINACION_ACADEMICA"],
   },
-
-  // ── SECRETARÍA DOCENTE ─────────────────────────────────
   {
     nombre: "Horario Escolar",
     icono:  "📅",
@@ -262,6 +318,9 @@ const MODULOS = [
     href:   "/dashboard/asistencia",
     roles:  ["COORDINACION_ACADEMICA"],
   },
+
+  // ── SECRETARÍA DOCENTE ─────────────────────────────────
+  
   {
     nombre: "Matrícula",
     icono:  "🎓",
@@ -357,6 +416,13 @@ const MODULOS = [
   icono: "📄",
   desc: "Ver mis movimientos y balance de cuenta",
   href: "/dashboard/financiero/estado-cuenta",
+  roles: ["TUTOR"],
+  },
+  {
+  nombre: "Pago en línea",
+  icono: "💰",
+  desc: "Realizar pagos en línea de colegiatura, transporte y otros conceptos.",
+  href: "/dashboard/tutor/pago-en-linea",
   roles: ["TUTOR"],
   },
   {
@@ -465,7 +531,9 @@ export default function DashboardPage() {
   return (
     <main style={styles.main}>
       <nav style={styles.nav}>
-        <span style={styles.navTitle}>🏫 Sistema de Gestión de Colegio</span>
+        <a href="/portal" style={styles.navTitleLink}>
+          <span style={styles.navTitle}>🏫 Sistema de Gestión de Colegio</span>
+        </a>
         <div style={styles.navRight}>
           <span style={styles.navUser}>👤 {session?.user?.name}</span>
           <button onClick={() => signOut({ callbackUrl: "/login" })} style={styles.btnLogout}>
@@ -511,7 +579,8 @@ const styles: Record<string, React.CSSProperties> = {
   loading:      { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
   main:         { minHeight: "100vh", background: "#f0f4f8", fontFamily: "Arial, sans-serif" },
   nav:          { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" },
-  navTitle:     { fontWeight: "bold", fontSize: "16px" },
+  navTitleLink: { textDecoration: "none", flex: 1, textAlign: "left" as const },
+  navTitle:     { fontWeight: "bold", fontSize: "16px", color: "#fff", cursor: "pointer" },
   navRight:     { display: "flex", alignItems: "center", gap: "16px" },
   navUser:      { fontSize: "14px" },
   btnLogout:    { background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", borderRadius: "6px", padding: "6px 14px", fontSize: "13px", cursor: "pointer" },

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `reportes_ingreso` ADD COLUMN `actualizadoEn` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3);

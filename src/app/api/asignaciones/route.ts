@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { verificarPermiso } from "@/lib/auth-helper";
+
+const ROLES_VER      = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA","SECRETARIA_DOCENTE","MAESTRO"];
+const ROLES_ESCRIBIR = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA"];
 
 export async function GET(req: NextRequest) {
+  const permiso = await verificarPermiso(ROLES_VER);
+  if (permiso.error)
+    return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const { searchParams } = new URL(req.url);
     const maestroId = searchParams.get("maestroId");
-
     const where: any = {};
     if (maestroId) where.maestroId = parseInt(maestroId);
 
@@ -25,11 +32,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const permiso = await verificarPermiso(ROLES_ESCRIBIR);
+  if (permiso.error)
+    return NextResponse.json({ error: permiso.error }, { status: permiso.status });
+
   try {
     const { maestroId, seccionId, asignaturaId } = await req.json();
-    if (!maestroId || !seccionId || !asignaturaId) {
+    if (!maestroId || !seccionId || !asignaturaId)
       return NextResponse.json({ error: "Todos los campos son obligatorios." }, { status: 400 });
-    }
 
     const existe = await prisma.asignacionMaestro.findFirst({
       where: {
@@ -38,9 +48,8 @@ export async function POST(req: NextRequest) {
         asignaturaId: parseInt(asignaturaId),
       },
     });
-    if (existe) {
+    if (existe)
       return NextResponse.json({ error: "Esta asignación ya existe." }, { status: 409 });
-    }
 
     const asignacion = await prisma.asignacionMaestro.create({
       data: {
@@ -54,7 +63,6 @@ export async function POST(req: NextRequest) {
         asignatura: { select: { nombre: true } },
       },
     });
-
     return NextResponse.json({ mensaje: "Asignación creada exitosamente.", asignacion }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });

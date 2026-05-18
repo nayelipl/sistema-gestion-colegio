@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Publicacion = { id: number; titulo: string; contenido: string; tipo: string; creadoEn: string };
 
@@ -41,11 +42,7 @@ export default function BlogPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>📰 Blog Institucional</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
+      <NavBar titulo="Blog Institucional" icono="📰" userName={session?.user?.name} />
       <div style={s.contenido}>
         <h1 style={s.titulo}>Blog Institucional</h1>
         <p style={s.subtitulo}>Publicaciones y noticias del colegio</p>

@@ -31,6 +31,8 @@ model Usuario {
   activo     Boolean  @default(true)
   creadoEn   DateTime @default(now())
 
+  informesCuentasPorCobrar  InformeCuentaPorCobrar[]
+
   @@map("usuarios")
 }
 
@@ -100,6 +102,10 @@ model Estudiante {
   anioActa      String?
   seccionId     Int?
   activo        Boolean   @default(true)
+  fechaBaja     DateTime?
+  motivoBaja    String?
+  dadoDeBajaPor String?
+  eliminadoEn   DateTime?
   creadoEn      DateTime  @default(now())
 
   padreNombre              String?
@@ -147,6 +153,9 @@ model Matricula {
   anioEscolar   String
   valorCobrado  Decimal  @db.Decimal(10, 2)
   observaciones String?
+  activa        Boolean   @default(true)
+  fechaBaja     DateTime?
+  motivoBaja    String?
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
@@ -359,7 +368,7 @@ model ConfiguracionCuota {
 
   tarifaAnio TarifaAnioEscolar @relation(fields: [tarifaAnioId], references: [id])
 
-  @@unique([tarifaAnioId, numeroCuota])
+  @@unique([tarifaAnioId, tipo, numeroCuota])
   @@map("configuracion_cuotas")
 }
 
@@ -472,9 +481,9 @@ model MovimientoContable {
 
 enum EstadoCargo {
   PENDIENTE // No se ha pagado nada
-  ABONADA // Se pagó parcialmente
-  SALDA // Se pagó completamente
-  VENCIDA // Pasó la fecha de vencimiento
+  ABONADO // Se pagó parcialmente
+  SALDO // Se pagó completamente
+  VENCIDO // Pasó la fecha de vencimiento
 }
 
 // Modelo para cargos de cuotas de colegiatura y transporte
@@ -536,6 +545,14 @@ model ReciboPago {
   descuento    Decimal    @default(0) @db.Decimal(10, 2)
   total        Decimal    @db.Decimal(10, 2)
   realizadoPor String
+  anulado      Boolean    @default(false)
+  anuladoPor   String?
+  anuladoEn    DateTime?
+  motivoAnulacion String?
+  concepto     String?
+  alPortador   String?
+  descripcion  String?
+  origen       String?    @default("PRESENCIAL") // "PRESENCIAL" o "EN_LINEA"
   creadoEn     DateTime   @default(now())
 
   tutor Tutor       @relation(fields: [tutorId], references: [id])
@@ -547,15 +564,14 @@ model ReciboPago {
 enum EstadoCuenta {
   CORRIENTE // No ha llegado la fecha de vencimiento
   PENDIENTE // Dentro del plazo de pago (25 al 30 + días de gracia)
-  VENCIDO // Pasó los días de gracia sin pago
   ABONADA // Pagó parcialmente
   SALDA // Pagó completamente
+  VENCIDA // Pasó los días de gracia sin pago
 }
 
 model CuentaPorCobrar {
   id      Int   @id @default(autoincrement())
   tutorId Int
-  tutor   Tutor @relation(fields: [tutorId], references: [id])
 
   // Datos del cargo
   cargoNo    String // "CUOTA 6/11", "TRANSPORTE COMPLETO", "1/2 TRANPORTE"
@@ -580,8 +596,35 @@ model CuentaPorCobrar {
   creadoEn      DateTime @default(now())
 
   pagos PagoCargo[]
+  tutor   Tutor @relation(fields: [tutorId], references: [id])
 
   @@map("cuentas_por_cobrar")
+}
+
+model InformeCuentaPorCobrar {
+  id              Int      @id @default(autoincrement())
+  titulo          String   @db.VarChar(200)
+  descripcion     String?  @db.Text
+  fechaDesde      DateTime?
+  fechaHasta      DateTime?
+  tipo            String   @default("TODOS") @db.VarChar(50)
+  cuotasVencidas  Int?
+  columnas        String   @db.Text
+  totalPendiente  Float
+  totalCobrado    Float
+  datos           String   @db.Text
+  anioEscolar     String?  @db.VarChar(20)
+  creadoPor       Int
+  creadoEn        DateTime @default(now())
+  actualizadoEn   DateTime @updatedAt
+  anulado         Boolean  @default(false)
+  
+  creador         Usuario  @relation(fields: [creadoPor], references: [id])
+  
+  @@index([creadoPor])
+  @@index([anulado])
+  @@index([creadoEn])
+  @@map("informes_cuentas_por_cobrar")
 }
 
 model Uniforme {
@@ -624,7 +667,7 @@ model CalendarioEscolar {
   descripcion String?
   fechaInicio DateTime
   fechaFin    DateTime
-  tipo        String   // "INICIO_CLASES", "FIN_CLASES", "FERIADO", "EXAMEN", "ACTIVIDAD", "RECESO", "OTRO"
+  tipo        String   // "INICIO_CLASES", "FIN_CLASES", "FERIADO", "EXAMEN", "ACTIVIDAD", "RECESO", "OTRO", "ENTREGA_P1", "ENTREGA_P2", "ENTREGA_P3", "ENTREGA_P4"
   anio        String
   publicado   Boolean  @default(false)
   creadoEn    DateTime @default(now())
