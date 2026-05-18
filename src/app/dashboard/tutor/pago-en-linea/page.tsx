@@ -9,6 +9,7 @@ import { redistribuirExcedente } from "@/lib/redistribuir-excedente";
 import { ModalDetalleRecibo } from "@/components/Modales/ModalDetalleRecibo";
 import { useImprimir } from "@/hooks/useImprimir";
 import { ImprimirContenido } from "@/components/ImprimirContenido";
+import NavBar from "@/components/NavBar";
 
 type Cargo = {
   id: number;
@@ -224,7 +225,7 @@ export default function PagoEnLineaPage() {
         const cargosData = data.cargosPendientes || [];
         setCargos(cargosData);
         setBalanceTotal(data.balanceTotal || 0);
-        calcularResumen(cargosData);
+        await calcularResumen(cargosData);
       } else {
         console.error("Error en API de cargos:", data.error);
         setError(data.error || "Error al cargar los cargos");
@@ -237,68 +238,40 @@ export default function PagoEnLineaPage() {
     }
   };
 
-  const calcularResumen = (cargosList: Cargo[]) => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    
+  const calcularResumen = async (cargosList: Cargo[]) => {
+    // Colegiatura: contar cuotas pagadas (saldoPendiente === 0)
     const colegiaturaCargos = cargosList.filter(c => c.tipo === "COLEGIATURA");
-    const transporteCargos = cargosList.filter(c => c.tipo === "TRANSPORTE");
-    
     const colegiaturaPagadas = colegiaturaCargos.filter(c => c.saldoPendiente === 0).length;
+    const colegiaturaTotal = colegiaturaCargos.length;
+    
+    // Transporte: contar cuotas pagadas (saldoPendiente === 0)
+    const transporteCargos = cargosList.filter(c => c.tipo === "TRANSPORTE");
     const transportePagadas = transporteCargos.filter(c => c.saldoPendiente === 0).length;
+    const transporteTotal = transporteCargos.length;
     
-    const totalPagadoCalc = cargosList.reduce((sum, c) => sum + (c.montoTotal - c.saldoPendiente), 0);
-    setTotalPagado(totalPagadoCalc);
+    // Próximas fechas de vencimiento (la más cercana con saldo pendiente)
+    const colegiaturaPendientes = colegiaturaCargos
+      .filter(c => c.saldoPendiente > 0)
+      .sort((a, b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime());
     
-    const tieneDeuda = cargosList.some(c => c.saldoPendiente > 0);
-    setMensajeEstado({ 
-        texto: tieneDeuda ? "⚠️ Tiene pago(s) pendiente(s)" : "✅ Tutor al día", 
-        tieneDeuda: tieneDeuda 
-    });
-    
-    const cargosPendientes = cargosList.filter(c => c.saldoPendiente > 0);
-    
-    // Solo colegiatura
-    const colegiaturaFuturas = cargosPendientes
-        .filter(c => c.tipo === "COLEGIATURA")
-        .filter(c => {
-        const fechaVenc = new Date(c.fechaVencimiento);
-        fechaVenc.setHours(0, 0, 0, 0);
-        return fechaVenc >= hoy;
-        })
-        .sort((a, b) => {
-        const fechaA = new Date(a.fechaVencimiento);
-        fechaA.setHours(0, 0, 0, 0);
-        const fechaB = new Date(b.fechaVencimiento);
-        fechaB.setHours(0, 0, 0, 0);
-        return fechaA.getTime() - fechaB.getTime();
-        });
-    
-    // Solo transporte
-    const transporteFuturas = cargosPendientes
-        .filter(c => c.tipo === "TRANSPORTE")
-        .filter(c => {
-        const fechaVenc = new Date(c.fechaVencimiento);
-        fechaVenc.setHours(0, 0, 0, 0);
-        return fechaVenc >= hoy;
-        })
-        .sort((a, b) => {
-        const fechaA = new Date(a.fechaVencimiento);
-        fechaA.setHours(0, 0, 0, 0);
-        const fechaB = new Date(b.fechaVencimiento);
-        fechaB.setHours(0, 0, 0, 0);
-        return fechaA.getTime() - fechaB.getTime();
-        });
+    const transportePendientes = transporteCargos
+      .filter(c => c.saldoPendiente > 0)
+      .sort((a, b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime());
     
     setResumenCuotas({
-        colegiaturaPagadas,
-        colegiaturaTotal: tarifaActiva?.colegiaturaNumCuotas || 11,
-        transportePagadas,
-        transporteTotal: tarifaActiva?.transporteNumCuotas || 10,
-        colegiaturaProximaFecha: colegiaturaFuturas.length > 0 ? new Date(colegiaturaFuturas[0].fechaVencimiento) : null,
-        transporteProximaFecha: transporteFuturas.length > 0 ? new Date(transporteFuturas[0].fechaVencimiento) : null
+      colegiaturaPagadas,
+      colegiaturaTotal,
+      transportePagadas,
+      transporteTotal,
+      colegiaturaProximaFecha: colegiaturaPendientes.length > 0 ? new Date(colegiaturaPendientes[0].fechaVencimiento) : null,
+      transporteProximaFecha: transportePendientes.length > 0 ? new Date(transportePendientes[0].fechaVencimiento) : null,
     });
-    };
+    
+    console.log("Resumen actualizado:", {
+      colegiatura: `${colegiaturaPagadas}/${colegiaturaTotal}`,
+      transporte: `${transportePagadas}/${transporteTotal}`
+    });
+  };
 
   const aplicarFiltros = (cargosList?: Cargo[]) => {
     const listaCargos = cargosList || cargos;
@@ -475,6 +448,9 @@ export default function PagoEnLineaPage() {
 
       setExito(`${data.mensaje} - Recibo: ${data.reciboNo}`);
 
+      // Recargar cargos y recalcular resumen
+      await cargarCargos();
+
       setReciboParaImprimir({
         reciboNo: data.reciboNo,
         fecha: new Date(),
@@ -610,7 +586,9 @@ export default function PagoEnLineaPage() {
     setFechaHastaRecibo("");
     setConceptoFiltro("TODOS");
     setRecibos([]);
+    setCargosSeleccionados({});
     setHaBuscado(false);
+    setHaFiltrado(false);
   };
 
   const verDetalleRecibo = (recibo: Recibo) => {
@@ -641,12 +619,7 @@ export default function PagoEnLineaPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>💳 Pago en Línea</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Pago en Línea" icono="💳" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <div>
@@ -1071,8 +1044,8 @@ const s: Record<string, React.CSSProperties> = {
   td: { padding: "10px 14px", borderBottom: "1px solid #f0f0f0", verticalAlign: "middle" },
   tdNum: { padding: "10px 14px", borderBottom: "1px solid #f0f0f0", textAlign: "center", verticalAlign: "middle" },
   codigo: { fontSize: "10px", color: "#888" },
-  inputValor: { width: "100px", padding: "6px 8px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "12px", textAlign: "right" },
-  checkbox: { width: "20px", height: "20px", cursor: "pointer" },
+  inputValor: { width: "100px", padding: "6px 8px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "12px", textAlign: "right", marginRight: "10px" },
+  checkbox: { width: "20px", height: "20px", cursor: "pointer", marginLeft: "10px" },
   totalesContainer: { textAlign: "right", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #eee" },
   totalBox: { fontSize: "16px", fontWeight: "bold", marginTop: "8px", color: "#2C1810" },
   metodoCard: { background: "#fff", borderRadius: "12px", padding: "16px", marginTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },

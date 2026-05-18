@@ -153,7 +153,7 @@ export default function NominaPage() {
             <span style={s.resValor}>{fmt(totalSFS + totalAFP)}</span>
             <span style={s.resLabel}>Total descuentos</span>
           </div>
-          <div style={{...s.resCard, borderColor:"#9ae6b4"}}>
+          <div style={{...s.resCard, border:"1px solid #9ae6b4"}}>
             <span style={{...s.resValor, color:"#276749"}}>{fmt(totalNeto)}</span>
             <span style={s.resLabel}>Total neto a pagar</span>
           </div>

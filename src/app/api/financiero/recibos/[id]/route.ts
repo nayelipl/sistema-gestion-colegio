@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import bcrypt from "bcryptjs";
+import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
+import { formatFechaLocal, formatHoraLocal } from "@/lib/formatear-fecha";
 
 export async function PATCH(
   req: NextRequest,
@@ -59,7 +61,9 @@ export async function PATCH(
       return NextResponse.json({ error: "El recibo ya está anulado" }, { status: 400 });
     }
 
-    const ahora = new Date();
+    const { fechaDesde: ahora } = ajustarFechasAPI(formatFechaLocal(new Date()), undefined);
+    const fechaActual = ahora || new Date();
+    const horaActual = formatHoraLocal(fechaActual);
 
     // Registrar el recibo como anulado en un movimiento contable inverso
     await prisma.$transaction(async (tx) => {
@@ -69,7 +73,7 @@ export async function PATCH(
         data: {
           anulado: true,
           anuladoPor: usuarioNombre,
-          anuladoEn: ahora,
+          anuladoEn: fechaActual,
           motivoAnulacion: motivo || "Motivo no especificado"
         }
       });
@@ -101,25 +105,39 @@ export async function PATCH(
             estado: nuevoEstado
           }
         });
+
+        // También actualizar la cuenta por cobrar asociada
+        await tx.cuentaPorCobrar.updateMany({
+          where: { cargoId: cargo.id },
+          data: {
+            saldoPendiente: nuevoSaldoPendiente,
+            montoPagado: nuevoMontoPagado,
+            estado: nuevoSaldoPendiente <= 0 ? "SALDA" : 
+                    (nuevoSaldoPendiente < cargo.montoTotal.toNumber() ? "ABONADA" : "PENDIENTE")
+          }
+        });
       }
 
-      // Crear movimiento contable inverso, la anulación
+      // Obtener el último movimiento contable del tutor
       const ultimoMovimiento = await tx.movimientoContable.findFirst({
         where: { tutorId: recibo.tutorId },
         orderBy: { id: "desc" }
       });
       
       let nuevoBalance = ultimoMovimiento?.balance?.toNumber() || 0;
+      
+      // Revertir el pago: sumar el total al balance (aumenta porque se anula el pago)
       nuevoBalance += recibo.total.toNumber();
 
+      // Crear movimiento contable de anulación
       await tx.movimientoContable.create({
         data: {
           docNo: `AN-${recibo.reciboNo}`,
-          fecha: ahora,
-          hora: ahora.toLocaleTimeString("es-DO", { hour12: false }),
+          fecha: fechaActual,
+          hora: horaActual,
           tipo: "AJUSTE",
           descripcion: `ANULACIÓN DE RECIBO ${recibo.reciboNo} - ${motivo || "Sin motivo"}`,
-          debito: recibo.total,
+          debito: recibo.total.toNumber(),  // Débito para aumentar el balance
           credito: 0,
           balance: nuevoBalance,
           tutorId: recibo.tutorId,

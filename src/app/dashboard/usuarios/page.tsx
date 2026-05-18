@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Empleado = {
   id: number; nombre: string; apellido: string; cedula: string;
@@ -170,12 +171,7 @@ export default function UsuariosPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>👥 Gestión de Usuarios</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Gestión de Usuarios" icono="👥" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <div>
@@ -473,7 +469,7 @@ const s: Record<string, React.CSSProperties> = {
   exito:         { background: "#f0fff4", border: "1px solid #9ae6b4", color: "#276749", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", fontSize: "13px" },
   tabs:          { display: "flex", gap: "8px", marginBottom: "16px" },
   tab:           { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600" as any, color: "#666", display: "flex", alignItems: "center", gap: "8px" },
-  tabActivo:     { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo:     { border: "1px solid #2C1810", color: "#2C1810", background: "#EBF3FB" },
   badge:         { background: "#2C1810", color: "#fff", borderRadius: "10px", padding: "2px 8px", fontSize: "11px" },
   inputBusqueda: { width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px", marginBottom: "16px", boxSizing: "border-box" as any },
   vacio:         { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },

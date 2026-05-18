@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Tab = "cursos" | "secciones" | "asignaturas";
 type Curso     = { id: number; codigo: string; grado: string; nivel: string; activo: boolean; secciones: Seccion[] };
-type Seccion   = { id: number; codigo: string; aula: string; cupos: number; activo: boolean; curso?: Curso; maestroEncargado?: { id: number; nombre: string; apellido: string } };
+type Seccion   = { id: number; codigo: string; aula: string; cupos: number; inscritos: number; activo: boolean; curso?: Curso; maestroEncargado?: { id: number; nombre: string; apellido: string } };
 type Asignatura = { id: number; codigo: string; nombre: string; activo: boolean };
 type Empleado  = { id: number; nombre: string; apellido: string; rol: string };
 
@@ -79,7 +80,7 @@ export default function AcademicoPage() {
     setCargando(true);
     const [c, sec, a] = await Promise.all([
       fetch("/api/academico/cursos").then(r => r.json()),
-      fetch("/api/academico/secciones").then(r => r.json()),
+      fetch("/api/academico/secciones?incluirInactivas=true").then(r => r.json()),
       fetch("/api/academico/asignaturas").then(r => r.json()),
     ]);
     setCursos(c.cursos || []);
@@ -201,12 +202,7 @@ export default function AcademicoPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>📚 Módulo Académico</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Módulo Académico" icono="📚" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <div>
@@ -284,19 +280,29 @@ export default function AcademicoPage() {
 
                 {/* ── SECCIONES ── */}
                 {tab === "secciones" && secciones.map((sec, i) => (
-                  <tr key={sec.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa" }}>
+                  <tr key={sec.id} style={{ 
+                    background: i % 2 === 0 ? "#fff" : "#f8f9fa", 
+                    opacity: sec.activo ? 1 : 0.6,
+                    backgroundColor: !sec.activo ? "#fff5f5" : undefined 
+                  }}>
                     <td style={s.td}><code style={s.codigo}>{sec.codigo}</code></td>
                     <td style={s.td}>{sec.aula}</td>
                     <td style={s.td}>{sec.curso?.grado ?? "—"}</td>
                     <td style={s.td}>{sec.maestroEncargado ? `${sec.maestroEncargado.nombre} ${sec.maestroEncargado.apellido}` : "—"}</td>
-                    <td style={s.td}>{sec.cupos}</td>
-                    <td style={s.td}><span style={sec.activo ? s.activo : s.inactivo}>{sec.activo ? "Activo" : "Inactivo"}</span></td>
+                    <td style={s.td}>{sec.cupos} ({sec.inscritos} inscritos)</td>
+                    <td style={s.td}>
+                      <span style={sec.activo ? s.activo : s.inactivo}>
+                        {sec.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
                     <td style={s.td}>
                       <div style={s.acciones}>
                         <button onClick={() => abrirEditar(sec)} style={s.btnEditar}>✏️ Editar</button>
                         {esDirAcademica && (
-                          <button onClick={() => toggleEstadoSeccion(sec)}
-                            style={sec.activo ? s.btnDesactivar : s.btnActivar}>
+                          <button 
+                            onClick={() => toggleEstadoSeccion(sec)} 
+                            style={sec.activo ? s.btnDesactivar : s.btnActivar}
+                          >
                             {sec.activo ? "⏸ Desactivar" : "▶ Activar"}
                           </button>
                         )}
@@ -513,7 +519,7 @@ const s: Record<string, React.CSSProperties> = {
   exitoMsg:     { background: "#f0fff4", border: "1px solid #9ae6b4", color: "#276749", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", fontSize: "13px" },
   tabs:         { display: "flex", gap: "8px", marginBottom: "20px" },
   tab:          { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600" as any, color: "#666" },
-  tabActivo:    { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo:    { color: "#2C1810", background: "#EBF3FB" },
   infoBox:      { background: "#fffbeb", border: "1px solid #f6e05e", borderRadius: "8px", padding: "16px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", color: "#744210" },
   btnSecundario:{ background: "#2C1810", color: "#fff", border: "none", borderRadius: "6px", padding: "8px 16px", fontSize: "13px", cursor: "pointer" },
   vacio:        { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },

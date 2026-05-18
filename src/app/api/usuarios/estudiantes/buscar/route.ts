@@ -6,6 +6,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q");
     const tipo = searchParams.get("tipo"); // 'no_matriculados' | 'matriculados' | 'todos'
+    const incluirInactivos = searchParams.get("incluirInactivos") === "true";
 
     const tarifaActiva = await prisma.tarifaAnioEscolar.findFirst({
       where: { activo: true },
@@ -24,22 +25,29 @@ export async function GET(req: NextRequest) {
         { nombre: { contains: q } },
         { apellido: { contains: q } },
       ],
-      activo: true,
+      // Para decidir si filtrar por activo
+      ...(incluirInactivos ? {} : { activo: true })
     };
 
-    // Filtrar según el tipo
+    // Filtrar según el tipo y sumas a la condición anterior
     if (tipo === "no_matriculados") {
-      whereCondition.NOT = {
-        matriculas: {
-          some: {
-            anioEscolar: anioEscolar
+      whereCondition = {
+        ...whereCondition,
+        NOT: {
+          matriculas: {
+            some: {
+              anioEscolar: anioEscolar
+            }
           }
         }
       };
     } else if (tipo === "matriculados") {
-      whereCondition.matriculas = {
-        some: {
-          anioEscolar: anioEscolar
+      whereCondition = {
+        ...whereCondition,
+        matriculas: {
+          some: {
+            anioEscolar: anioEscolar
+          }
         }
       };
     }
@@ -75,6 +83,7 @@ export async function GET(req: NextRequest) {
         apellido: est.apellido,
         fechaNac: est.fechaNac,
         edad: est.edad,
+        activo: est.activo,
         tutor: est.tutor,
         seccion: est.seccion,
       },

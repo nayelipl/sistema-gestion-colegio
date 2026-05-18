@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Calificacion = {
   id: number; periodo: string; notaFinal: number; condicion: string; publicado: boolean;
@@ -74,12 +75,7 @@ export default function OrientacionPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>🧭 Orientación Escolar</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Orientación Escolar" icono="🧭" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <h1 style={s.titulo}>Orientación Escolar</h1>
@@ -187,7 +183,7 @@ const s: Record<string, React.CSSProperties> = {
   alertaCard:   { background: "#fffbeb", border: "1px solid #f6e05e", borderRadius: "10px", padding: "14px 18px", marginBottom: "20px", color: "#744210" },
   tabs:         { display: "flex", gap: "8px", marginBottom: "20px" },
   tab:          { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666" },
-  tabActivo:    { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo:    { border: "1px solid #2C1810", color: "#2C1810", background: "#EBF3FB" },
   inputBusqueda:{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px", marginBottom: "16px", boxSizing: "border-box" as any },
   vacio:        { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },
   tablaWrap:    { overflowX: "auto" as any, background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },

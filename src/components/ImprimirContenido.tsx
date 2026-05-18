@@ -39,36 +39,39 @@ export const ImprimirContenido = React.forwardRef<HTMLDivElement, ImprimirConten
       infoItem: { fontSize: "13px" },
       cuadreResumen: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "20px", padding: "16px", background: "#f0f4f8", borderRadius: "8px" },
       anuladoBadge: {
-    background: "#fff5f5",
-    border: "1px solid #fed7d7",
-    borderRadius: "8px",
-    padding: "8px",
-    textAlign: "center" as const,
-    color: "#c53030",
-    fontWeight: "bold",
-  },
+      background: "#fff5f5", border: "1px solid #fed7d7", borderRadius: "8px", padding: "8px", textAlign: "center" as const, color: "#c53030", fontWeight: "bold", },
+      firmas: { display: "flex", justifyContent: "space-between", marginTop: "50px" },
     };
+
+    const formatMonto = (monto: number): string => `RD$${monto.toFixed(2)}`;
 
     const renderReciboCargos = () => {
       const subTotal = toNumber(datos.subTotal);
       const recargoTotal = toNumber(datos.recargoTotal);
       const total = toNumber(datos.total);
+      const estaAnulado = datos.anulado === true;
       
       return (
         <>
+          {estaAnulado && (
+            <div style={{
+              ...estilos.anuladoBadge,
+              marginBottom: "16px"
+            }}>
+              🚫 RECIBO ANULADO {datos.motivoAnulacion && ` - Motivo: ${datos.motivoAnulacion}`}
+            </div>
+          )}
           <div style={estilos.seccion}>
-            <p><strong>Recibo No.:</strong> {datos.reciboNo || "—"}</p>
+            <p><strong>Recibo No.:</strong> <span style={estaAnulado ? { textDecoration: "line-through", color: "#999" } : {}}>{datos.reciboNo || "—"}</span></p>
             <p><strong>Fecha:</strong> {datos.fecha ? formatFechaLarga(datos.fecha) : "—"}</p>
             <p><strong>Tutor:</strong> {datos.tutor?.nombre} {datos.tutor?.apellido}</p>
             <p><strong>Cuenta:</strong> {datos.tutor?.cuentaNo}</p>
+            {datos.anuladoPor && <p><strong>Anulado por:</strong> {datos.anuladoPor}</p>}
+            {datos.anuladoEn && <p><strong>Fecha anulación:</strong> {formatFechaLarga(datos.anuladoEn)}</p>}
           </div>
           <h3>Detalle de Cargos</h3>
           <table style={estilos.tabla}>
-            <thead><tr>
-                    <th style={estilos.th}>Cargo No.</th>
-                    <th style={estilos.th}>Tipo</th>
-                    <th style={estilos.th}>Monto</th>
-                    </tr></thead>
+            <thead><tr><th style={estilos.th}>Cargo No.</th><th style={estilos.th}>Tipo</th><th style={estilos.th}>Monto</th></tr></thead>
             <tbody>
               {datos.pagos?.map((pago: any, idx: number) => (
                 <tr key={idx}>
@@ -105,135 +108,110 @@ export const ImprimirContenido = React.forwardRef<HTMLDivElement, ImprimirConten
     );
 
     const renderReporte = () => {
-        const recibos = datos.recibos || [];
-        const conceptosMap = datos.conceptosMap || {};
-        const conceptosOrden = ["Inscripción", "Colegiatura", "Transporte", "Uniforme", "Derecho a Graduación", "Excursión Escolar", "Otros Ingresos"];
-        
-        return (
-            <>
-            <div style={estilos.infoGrid}>
-                <div style={estilos.infoItem}>
-                <strong>Reporte No.:</strong> {datos.reporteNo || "—"}
-                </div>
-                <div style={estilos.infoItem}>
-                <strong>Fecha:</strong> {datos.fecha ? formatFechaLarga(datos.fecha) : "—"}
-                </div>
-                <div style={estilos.infoItem}>
-                <strong>Realizado por:</strong> {datos.realizadoPor || "Todos"}
-                </div>
-                <div style={estilos.infoItem}>
-                <strong>Período:</strong> {formatFechaLarga(datos.fechaDesde)} - {formatFechaLarga(datos.fechaHasta)}
-                </div>
-                <div style={estilos.infoItem}>
-                <strong>Saldo Inicial:</strong> RD${toNumber(datos.saldoInicial).toFixed(2)}
-                </div>
-                <div style={estilos.infoItem}>
-                <strong>Saldo Final:</strong> RD${toNumber(datos.saldoFinal).toFixed(2)}
-                </div>
-            </div>
+      const recibos = datos.recibos || [];
+      const conceptosMap = datos.conceptosMap || {};
+      const conceptosOrden = ["Inscripción", "Colegiatura", "Transporte", "Uniforme", "Derecho a Graduación", "Excursión Escolar", "Otros Ingresos"];
+      
+      // Calcular totales de métodos de pago
+      let totalEfectivo = 0;
+      let totalTarjeta = 0;
+      let totalCheque = 0;
+      let totalTransferencia = 0;
+      
+      recibos.forEach((r: any) => {
+        if (r.metodoPago === "EFECTIVO") totalEfectivo += r.monto;
+        else if (r.metodoPago === "TARJETA") totalTarjeta += r.monto;
+        else if (r.metodoPago === "CHEQUE") totalCheque += r.monto;
+        else if (r.metodoPago === "TRANSFERENCIA") totalTransferencia += r.monto;
+      });
+      
+      const sumaMetodos = totalEfectivo + totalTarjeta + totalCheque + totalTransferencia + (datos.creditoMonto || 0);
+      const diferencia = sumaMetodos - (datos.totalMonto || 0);
+      const esCuadrado = Math.abs(diferencia) < 0.01;
+      
+      return (
+        <>
+          <div style={estilos.infoGrid}>
+            <div><strong>Reporte No.:</strong> {datos.reporteNo || "—"}</div>
+            <div><strong>Fecha:</strong> {formatFechaLarga(datos.fecha)}</div>
+            <div><strong>Realizado por:</strong> {datos.realizadoPor || "Todos"}</div>
+            <div><strong>Período:</strong> {formatFechaLarga(datos.fechaDesde)} - {formatFechaLarga(datos.fechaHasta)}</div>
+            <div><strong>Saldo Inicial:</strong> {formatMonto(datos.saldoInicial)}</div>
+            <div><strong>Saldo Final:</strong> {formatMonto(datos.saldoFinal)}</div>
+            <div><strong>Crédito/Ajuste:</strong> {formatMonto(datos.creditoMonto)}</div>
+            <div><strong>Total Recibos:</strong> {formatMonto(datos.totalMonto)}</div>
+          </div>
 
-            <h3>Resumen de Ingresos</h3>
-            <table style={estilos.tabla}>
-                <thead>
-                <tr>
-                    <th style={estilos.th}>Concepto</th>
-                    <th style={estilos.th}>Efectivo</th>
-                    <th style={estilos.th}>Tarjeta</th>
-                    <th style={estilos.th}>Cheque</th>
-                    <th style={estilos.th}>Transferencia</th>
-                    <th style={estilos.th}>Cantidad</th>
-                    <th style={estilos.th}>Total</th>
+          <h3>Resumen de Ingresos por Concepto</h3>
+          <table style={estilos.tabla}>
+            <thead>
+              <tr><th>Concepto</th><th>Efectivo</th><th>Tarjeta</th><th>Cheque</th><th>Transferencia</th><th>Cantidad</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              {conceptosOrden.map(nombre => {
+                const c = conceptosMap[nombre] || { efectivo: 0, tarjeta: 0, cheque: 0, transferencia: 0, total: 0, cantidad: 0 };
+                return (
+                  <tr key={nombre}>
+                    <td>{nombre}</td>
+                    <td className="right">{formatMonto(c.efectivo)}</td>
+                    <td className="right">{formatMonto(c.tarjeta)}</td>
+                    <td className="right">{formatMonto(c.cheque)}</td>
+                    <td className="right">{formatMonto(c.transferencia)}</td>
+                    <td className="center">{c.cantidad}</td>
+                    <td className="right"><strong>{formatMonto(c.total)}</strong></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td><strong>TOTAL</strong></td>
+                <td className="right"><strong>{formatMonto(totalEfectivo)}</strong></td>
+                <td className="right"><strong>{formatMonto(totalTarjeta)}</strong></td>
+                <td className="right"><strong>{formatMonto(totalCheque)}</strong></td>
+                <td className="right"><strong>{formatMonto(totalTransferencia)}</strong></td>
+                <td className="center"><strong>{recibos.length}</strong></td>
+                <td className="right"><strong>{formatMonto(datos.totalMonto)}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <h3>Cuadre Final</h3>
+          <div style={estilos.cuadreResumen}>
+            <div><strong>Suma Métodos de Pago:</strong> {formatMonto(sumaMetodos)}</div>
+            <div><strong>Total Recibos:</strong> {formatMonto(datos.totalMonto)}</div>
+            <div><strong style={{ color: esCuadrado ? "#276749" : diferencia > 0 ? "#ed8936" : "#c53030" }}>
+              Diferencia: {esCuadrado ? "✓ CUADRADO" : diferencia > 0 ? `SOBRANTE: ${formatMonto(diferencia)}` : `FALTANTE: ${formatMonto(Math.abs(diferencia))}`}
+            </strong></div>
+          </div>
+
+          <h3>Recibos</h3>
+          <table style={estilos.tabla}>
+            <thead><tr><th>No.</th><th>Fecha</th><th>Tutor</th><th>Concepto</th><th>Monto</th><th>Método</th></tr></thead>
+            <tbody>
+              {recibos.map((r: any, i: number) => (
+                <tr key={i}>
+                  <td>{r.reciboNo}</td>
+                  <td>{formatFechaLarga(r.fecha)}</td>
+                  <td>{r.tutor}</td>
+                  <td>{r.concepto}</td>
+                  <td className="right">{formatMonto(r.monto)}</td>
+                  <td>{r.metodoPago}</td>
                 </tr>
-                </thead>
-                <tbody>
-                {conceptosOrden.map((nombreConcepto) => {
-                    const data = conceptosMap[nombreConcepto] || { efectivo: 0, tarjeta: 0, cheque: 0, transferencia: 0, total: 0, cantidad: 0 };
-                    return (
-                    <tr key={nombreConcepto}>
-                        <td style={estilos.td}>{nombreConcepto}</td>
-                        <td style={estilos.td}>RD${data.efectivo.toFixed(2)}</td>
-                        <td style={estilos.td}>RD${data.tarjeta.toFixed(2)}</td>
-                        <td style={estilos.td}>RD${data.cheque.toFixed(2)}</td>
-                        <td style={estilos.td}>RD${data.transferencia.toFixed(2)}</td>
-                        <td style={estilos.td}>{data.cantidad}</td>
-                        <td style={estilos.td}><strong>RD${data.total.toFixed(2)}</strong></td>
-                    </tr>
-                    );
-                })}
-                </tbody>
-                <tfoot>
-                <tr>
-                    <td style={estilos.td}><strong>TOTAL</strong></td>
-                    <td style={estilos.td}><strong>RD${toNumber(datos.totalEfectivo).toFixed(2)}</strong></td>
-                    <td style={estilos.td}><strong>RD${toNumber(datos.totalTarjeta).toFixed(2)}</strong></td>
-                    <td style={estilos.td}><strong>RD${toNumber(datos.totalCheque).toFixed(2)}</strong></td>
-                    <td style={estilos.td}><strong>RD${toNumber(datos.totalTransferencia).toFixed(2)}</strong></td>
-                    <td style={estilos.td}><strong>{recibos.length}</strong></td>
-                    <td style={estilos.td}><strong>RD${toNumber(datos.totalMonto).toFixed(2)}</strong></td>
-                </tr>
-                </tfoot>
-            </table>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr><td colSpan={4}><strong>Cantidad de cobros:</strong> {recibos.length}</td><td className="right"><strong>{formatMonto(datos.totalMonto)}</strong></td><td></td></tr>
+            </tfoot>
+          </table>
 
-            <h3>Recibos</h3>
-            <table style={estilos.tabla}>
-                <thead>
-                <tr>
-                    <th style={estilos.th}>Cobro No.</th>
-                    <th style={estilos.th}>Fecha</th>
-                    <th style={estilos.th}>Tutor</th>
-                    <th style={estilos.th}>Concepto</th>
-                    <th style={estilos.th}>Monto</th>
-                    <th style={estilos.th}>Usuario</th>
-                </tr>
-                </thead>
-                <tbody>
-                {recibos.map((recibo: any, idx: number) => (
-                    <tr key={idx}>
-                    <td style={estilos.td}>{recibo.reciboNo}</td>
-                    <td style={estilos.td}>{formatFechaLarga(recibo.fecha)}</td>
-                    <td style={estilos.td}>{recibo.tutor}</td>
-                    <td style={estilos.td}>
-                        {recibo.concepto === "INSCRIPCION" ? "Inscripción" : 
-                        recibo.concepto === "COLEGIATURA" ? "Colegiatura" : 
-                        recibo.concepto === "TRANSPORTE" ? "Transporte" : 
-                        recibo.concepto === "UNIFORME" ? "Uniforme" : 
-                        recibo.concepto === "DERECHO A GRADUACIÓN" ? "Derecho a Graduación" :
-                        recibo.concepto === "EXCURSIÓN ESCOLAR" ? "Excursión Escolar" : 
-                        recibo.concepto}
-                    </td>
-                    <td style={estilos.td}>RD${toNumber(recibo.monto).toFixed(2)}</td>
-                    <td style={estilos.td}>{recibo.usuario}</td>
-                    </tr>
-                ))}
-                </tbody>
-                <tfoot>
-                <tr>
-                    <td colSpan={5} style={estilos.td}><strong>Cantidad de cobros:</strong> {recibos.length}</td>
-                    <td style={estilos.td}><strong>Total:</strong> RD${toNumber(datos.totalMonto).toFixed(2)}</td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            <div style={estilos.total}>
-                <p><strong>Sub-Total:</strong> RD${toNumber(datos.totalMonto).toFixed(2)}</p>
-                <p><strong>Saldo Inicial:</strong> RD${toNumber(datos.saldoInicial).toFixed(2)}</p>
-                <p><strong>Saldo Final:</strong> RD${toNumber(datos.saldoFinal).toFixed(2)}</p>
-                <p><strong>Diferencia:</strong> RD${(toNumber(datos.saldoFinal) - toNumber(datos.saldoInicial) - toNumber(datos.totalMonto)).toFixed(2)}</p>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "50px" }}>
-                <div style={{ textAlign: "center", width: "200px" }}>
-                <hr style={{ marginBottom: "8px" }} />
-                <p><strong>Cajero</strong></p>
-                </div>
-                <div style={{ textAlign: "center", width: "200px" }}>
-                <hr style={{ marginBottom: "8px" }} />
-                <p><strong>Contador</strong></p>
-                </div>
-            </div>
-            </>
-        );
-        };
+          <div style={estilos.firmas}>
+            <div><hr /><p>Cajero</p></div>
+            <div><hr /><p>Contador</p></div>
+          </div>
+        </>
+      );
+    };
 
     const renderDesembolsoCajaChica = () => {
         const estaAnulado = datos.estado === "ANULADA";

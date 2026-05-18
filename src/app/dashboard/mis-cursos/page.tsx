@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Estudiante  = { id: number; codigo: string; nombre: string; apellido: string };
 type Asignacion  = {
@@ -111,11 +112,7 @@ export default function MisCursosPage() {
     if (asignaciones.length === 0) {
       return (
         <main style={s.main}>
-          <nav style={s.nav}>
-            <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-            <span style={s.navTitle}>📚 Mis Cursos</span>
-            <span style={s.navUser}>👤 {session?.user?.name}</span>
-          </nav>
+          <NavBar titulo="Mis Cursos" icono="📚" userName={session?.user?.name} />
           <div style={s.contenido}>
             <div style={s.card}>
               <p>No tienes cursos asignados todavía. Contacta al administrador.</p>
@@ -347,7 +344,7 @@ const s: Record<string, React.CSSProperties> = {
   resumenValor: { fontSize: "13px", color: "#333", margin: "0 0 2px", fontWeight: "600" },
   tabs:         { display: "flex", gap: "8px", marginBottom: "20px" },
   tab:          { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666" },
-  tabActivo:    { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo:    { border: "1px solid #2C1810", color: "#2C1810", background: "#EBF3FB" },
   card:         { background: "#fff", borderRadius: "12px", padding: "28px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
   exitoMsg:     { background: "#f0fff4", border: "1px solid #9ae6b4", color: "#276749", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", fontSize: "13px" },
   errorMsg:     { color: "#e53e3e", fontSize: "13px", background: "#fff5f5", border: "1px solid #fed7d7", borderRadius: "6px", padding: "8px 12px", marginBottom: "12px" },

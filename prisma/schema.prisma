@@ -102,6 +102,10 @@ model Estudiante {
   anioActa      String?
   seccionId     Int?
   activo        Boolean   @default(true)
+  fechaBaja     DateTime?
+  motivoBaja    String?
+  dadoDeBajaPor String?
+  eliminadoEn   DateTime?
   creadoEn      DateTime  @default(now())
 
   padreNombre              String?
@@ -149,6 +153,9 @@ model Matricula {
   anioEscolar   String
   valorCobrado  Decimal  @db.Decimal(10, 2)
   observaciones String?
+  activa        Boolean   @default(true)
+  fechaBaja     DateTime?
+  motivoBaja    String?
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
@@ -667,79 +674,4 @@ model CalendarioEscolar {
   actualizadoEn DateTime @updatedAt
 
   @@map("calendario_escolar")
-}
-
-model ReporteIngreso {
-  id            Int      @id @default(autoincrement())
-  reporteNo     String   @unique
-  fecha         DateTime @default(now())
-  fechaDesde    DateTime
-  fechaHasta    DateTime
-  realizadoPor  String?
-  totalRecibos  Int
-  totalMonto    Decimal  @db.Decimal(10, 2)
-  saldoInicial  Decimal  @db.Decimal(10, 2)
-  saldoFinal    Decimal  @db.Decimal(10, 2)
-  estado        String   // BORRADOR, REPORTADO
-  datos         String   @db.Text
-  creadoPor     String
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
-  
-  @@map("reportes_ingreso")
-}
-
-model CajaChica {
-  id            Int      @id @default(autoincrement())
-  desembolsoNo  String   @unique
-  fecha         DateTime @default(now())
-  pagadoA       String
-  monto         Decimal  @db.Decimal(10, 2)
-  conCargoA     String
-  porConceptoDe String
-  aprobadoPor   String
-  recibidoPor   String
-  cedula        String?
-  estado        String   @default("ACTIVA") // ACTIVA, ANULADA, REPORTADA
-  anuladoPor    String?
-  anuladoEn     DateTime?
-  motivoAnulacion String?
-  creadoPor     String
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
-
-  @@map("caja_chica")
-}
-
-model CajaChicaFondo {
-  id            Int      @id @default(autoincrement())
-  fecha         DateTime @default(now())
-  saldoInicial  Decimal  @db.Decimal(10, 2)
-  fondoMinimo   Decimal  @db.Decimal(10, 2)
-  realizadoPor  String
-  estado        String   @default("ACTIVO") // ACTIVO, REPUESTO
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
-
-  @@map("caja_chica_fondo")
-}
-
-model CajaChicaCuadre {
-  id            Int      @id @default(autoincrement())
-  cuadreNo      String   @unique
-  fecha         DateTime @default(now())
-  fechaDesde    DateTime
-  fechaHasta    DateTime
-  realizadoPor  String
-  saldoInicial  Decimal  @db.Decimal(10, 2)
-  totalDesembolsos Decimal @db.Decimal(10, 2)
-  saldoActual   Decimal  @db.Decimal(10, 2)
-  montoReposicion Decimal @db.Decimal(10, 2)
-  estado        String   @default("BORRADOR") // BORRADOR, REPORTADO
-  desembolsos   Json     // Lista de desembolsos incluidos
-  creadoPor     String
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
-
-  @@map("caja_chica_cuadre")
 }

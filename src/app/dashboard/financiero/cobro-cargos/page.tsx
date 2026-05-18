@@ -11,6 +11,7 @@ import { ModalContrasenaRol } from "../../../../components/Modales/ModalContrase
 import { redistribuirExcedente } from "@/lib/redistribuir-excedente";
 import { useImprimir } from "@/hooks/useImprimir";
 import { ImprimirContenido } from "@/components/ImprimirContenido";
+import NavBar from "@/components/NavBar";
 
 type Tab = "cobro" | "recibos";
 
@@ -603,12 +604,7 @@ export default function CobroCargosPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>💰 Cobro de Cargos a Tutores</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Cobro de Cargos a Tutores" icono="💰" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <h1 style={s.titulo}>Cobro de Cargos a Tutores</h1>
@@ -665,7 +661,7 @@ export default function CobroCargosPage() {
                     }
                     loadingMessage={() => "Buscando tutores..."}
                     styles={{
-                      control: (base) => ({ ...base, padding: "4px", borderRadius: "7px", borderColor: "#ddd", minHeight: "42px"
+                      control: (base) => ({ ...base, padding: "4px", borderRadius: "7px", border: "1px solid #ddd", minHeight: "42px"
                       }),
                       menu: (base) => ({ ...base, zIndex: 9999 }),
                     }}
@@ -924,7 +920,7 @@ export default function CobroCargosPage() {
           accion="anular el recibo"
         />
 
-        {/* Componente oculto para imprimmir */}
+        {/* Componente oculto para imprimir */}
         <div style={{ display: "none" }}>
           {reciboRecienCreado && (
             <ImprimirContenido

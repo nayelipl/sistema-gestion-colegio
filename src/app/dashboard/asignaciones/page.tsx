@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Asignacion = {
   id: number;
@@ -132,12 +133,7 @@ export default function AsignacionesPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>📋 Asignaciones de Maestros</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Asignaciones de Maestro" icono="📋" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <div>

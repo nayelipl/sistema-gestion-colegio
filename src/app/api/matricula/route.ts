@@ -29,6 +29,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Estudiante no encontrado" }, { status: 404 });
     }
 
+    // Si el estudiante está inactivo, lo reactivamos
+    if (!estudiante.activo) {
+      await prisma.estudiante.update({
+        where: { id: estudianteId },
+        data: { 
+          activo: true,
+          fechaBaja: null,
+          motivoBaja: null
+        }
+      });
+      
+      // Reactivar usuario asociado (buscar por nombre)
+      const usuarioEstudiante = await prisma.usuario.findFirst({
+        where: {
+          nombre: `${estudiante.nombre} ${estudiante.apellido}`,
+          rol: "ESTUDIANTE",
+        }
+      });
+      
+      if (usuarioEstudiante?.email) {
+        await prisma.usuario.update({
+          where: { email: usuarioEstudiante.email },
+          data: { activo: true },
+        });
+      }
+    }
+
     if (!estudiante.tutorId) {
       return NextResponse.json({ error: "El estudiante no tiene un tutor asignado" }, { status: 400 });
     }
@@ -101,6 +128,10 @@ export async function POST(req: NextRequest) {
 
     if (!seccion || !seccion.curso) {
       return NextResponse.json({ error: "Sección o curso no encontrado" }, { status: 404 });
+    }
+
+    if (!seccion.activo) {
+      return NextResponse.json({ error: "No se puede matricular en una sección inactiva" }, { status: 400 });
     }
 
     // 6. Obtener tarifa del curso

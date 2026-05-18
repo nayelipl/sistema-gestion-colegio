@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { obtenerSiguienteNumero } from "@/lib/contador-secuencial";
-import { formatHoraLocal } from "@/lib/formatear-fecha";
+import { formatFechaLocal, formatHoraLocal } from "@/lib/formatear-fecha";
 import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
 
 export async function POST(req: Request) {
@@ -22,17 +22,6 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { tutorId, pagos, metodoPago, subTotal, recargoTotal, descuento, total, concepto, origen } = body;
-
-    // 🔍 LOG 1: Datos recibidos
-    console.log("=== [registrar-pago] Datos recibidos ===");
-    console.log("tutorId:", tutorId);
-    console.log("metodoPago:", metodoPago);
-    console.log("total:", total);
-    console.log("concepto:", concepto);
-    console.log("origen recibido:", origen);
-    console.log("rol del usuario:", rol);
-    console.log("email del usuario:", session.user?.email);
-    console.log("======================================");
 
     // Si es tutor, que solo pueda pagar sus propios cargos
     if (rol === "TUTOR") {
@@ -72,20 +61,21 @@ export async function POST(req: Request) {
 
     const reciboNo = await obtenerSiguienteNumero("RI");
     
-    const ahora = new Date();
-    const hora = formatHoraLocal(ahora);
+    const { fechaDesde: ahora } = ajustarFechasAPI(formatFechaLocal(new Date()), undefined);
+    const fechaActual = ahora || new Date();
+    const horaActual = formatHoraLocal(fechaActual);
 
     const resultado = await prisma.$transaction(async (tx) => {
       // 1. Crear un solo recibo para todo el pago
       const recibo = await tx.reciboPago.create({
         data: {
           reciboNo,
-          fecha: ahora,
-          hora,
+          fecha: fechaActual,
+          hora: horaActual,
           tutorId,
           metodoPago,
           subTotal: Math.round(Number(subTotal) * 100) / 100,
-          recargoTotal: Math.round(Number(recargoTotal) * 100) / 100,
+          recargoTotal: 0,
           descuento: Math.round(Number(descuento) * 100) / 100,
           total: Math.round(Number(total) * 100) / 100,
           realizadoPor: session.user?.name || session.user?.email || "Sistema",
@@ -95,13 +85,6 @@ export async function POST(req: Request) {
           origen: origen || "PRESENCIAL",
         },
       });
-
-      // 🔍 LOG 2: Recibo creado
-      console.log("=== [registrar-pago] Recibo creado ===");
-      console.log("reciboNo:", recibo.reciboNo);
-      console.log("id:", recibo.id);
-      console.log("origen guardado:", (recibo as any).origen);
-      console.log("======================================");
 
       const ultimoMovimiento = await tx.movimientoContable.findFirst({
         where: { tutorId },
@@ -155,76 +138,17 @@ export async function POST(req: Request) {
       
       montoTotalPagado = Math.round(montoTotalPagado * 100) / 100;
       
-      // 3. Calcular colegiatura y recargo
-      let montoColegiatura = 0;
-      let montoRecargo = 0;
-
-      // Obtener porcentaje de recargo de la tarifa activa
-      const tarifaActiva = await tx.tarifaAnioEscolar.findFirst({
-        where: { activo: true },
-        select: { recargoPorcentaje: true, colegiaturaDiasGracia: true }
-      });
-
-      const porcentajeRecargo = tarifaActiva?.recargoPorcentaje || 6;
-      const diasGracia = tarifaActiva?.colegiaturaDiasGracia || 5;
-
-      const fechaStr = new Date().toISOString().split('T')[0];
-      const { fechaDesde: fechaAjustada } = ajustarFechasAPI(fechaStr, undefined);
-      const hoy = fechaAjustada || new Date();
-      hoy.setHours(0, 0, 0, 0);
-
-      for (const pago of pagosFormateados) {
-        const cargo = await tx.cargo.findUnique({
-          where: { id: pago.cargoId },
-        });
-
-        if (cargo) {
-          const fechaVenc = new Date(cargo.fechaVencimiento);
-          fechaVenc.setHours(0, 0, 0, 0);
-          
-          const fechaLimite = new Date(fechaVenc);
-          fechaLimite.setDate(fechaLimite.getDate() + diasGracia);
-          
-          const estaVencido = cargo.estado === "VENCIDO" || fechaVenc < fechaLimite;
-          
-          const montoOriginal = cargo.montoOriginal.toNumber();
-          const saldoAntesDePago = cargo.saldoPendiente.toNumber();
-          const montoPagado = pago.montoPagado;
-          
-          if (estaVencido && saldoAntesDePago > 0) {
-            // El recargo se calcula sobre el saldo pendiente
-            const recargoCalculado = (saldoAntesDePago * porcentajeRecargo) / 100;
-            montoRecargo += recargoCalculado;
-            montoColegiatura += saldoAntesDePago;
-          } else {
-            // No vencido, solo se cobra el saldo pendiente
-            montoColegiatura += saldoAntesDePago;
-          }
-        }
-      }
-
-      console.log(`Total colegiatura: ${montoColegiatura}, Total recargo: ${montoRecargo}, Total pagado: ${montoTotalPagado}`);
-      console.log(`Frontend envió - recargoTotal: ${recargoTotal}, colegiatura: ${subTotal}`);
-      console.log(`Backend calculó - recargo: ${montoRecargo}, colegiatura: ${montoColegiatura}`);
-      if (Math.abs(montoRecargo - (recargoTotal || 0)) > 0.01) {
-        console.warn(`⚠️ Diferencia en recargo: frontend=${recargoTotal}, backend=${montoRecargo}`);
-      }
-
-      // 4. Movimiento contable
-      // El balance se calcula: balance anterior - crédito + débito
-      nuevoBalance = nuevoBalance - montoTotalPagado + montoRecargo;
-      
-      const movimientoNo = reciboNo;
-      const descripcionMovimiento = concepto || "PAGO DE COLEGIATURA & TRANSPORTE";
+      // 3. Movimiento contable del pago, solo crédito
+      nuevoBalance = nuevoBalance - montoTotalPagado;
       
       await tx.movimientoContable.create({
         data: {
-          docNo: movimientoNo,
-          fecha: ahora,
-          hora,
+          docNo: reciboNo,
+          fecha: fechaActual,
+          hora: horaActual,
           tipo: "PAGO",
-          descripcion: descripcionMovimiento,
-          debito: montoRecargo,
+          descripcion: concepto || "PAGO DE COLEGIATURA & TRANSPORTE",
+          debito: 0,
           credito: montoTotalPagado,
           balance: Math.round(nuevoBalance * 100) / 100,
           tutorId,
@@ -233,20 +157,13 @@ export async function POST(req: Request) {
         },
       });
       
-      return { reciboNo, movimientoNo, montoTotalPagado };
+      return { reciboNo, montoTotalPagado };
     });
 
-    // 🔍 LOG 3: Respuesta
-    console.log("=== [registrar-pago] Respuesta ===");
-    console.log("reciboNo:", resultado.reciboNo);
-    console.log("montoPagado:", resultado.montoTotalPagado);
-    console.log("================================");
-    
     return NextResponse.json({
       success: true,
       mensaje: "Pago registrado exitosamente",
       reciboNo: resultado.reciboNo,
-      movimientoNo: resultado.movimientoNo,
       montoPagado: resultado.montoTotalPagado,
     });
     

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import NavBar from "@/components/NavBar";
 
 type Estudiante = {
   id: number; codigo: string; nombre: string; apellido: string;
@@ -54,12 +55,7 @@ export default function RepresentadosPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>👨‍👧 Mis Representados</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Mis Representados" icono="👨‍👧" userName={session?.user?.name} />
       <div style={s.contenido}>
         <h1 style={s.titulo}>Mis Representados</h1>
         <p style={s.subtitulo}>Calificaciones, asistencia y horario de tus hijos</p>

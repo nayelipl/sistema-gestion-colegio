@@ -1,167 +1,218 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
+import { authOptions } from "@/lib/auth";
 import { EstadoCargo, EstadoCuenta } from "@prisma/client";
-import { actualizarEstadosCargos } from "@/lib/actualizar-estados-cargos";
+import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
-    console.log("=== [cuentas-por-cobrar] Inicio ===");
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const usuarioRol = (session.user as any)?.role;
-    if (!["ADMINISTRADOR", "CONTADOR"].includes(usuarioRol)) {
+    const rol = (session.user as any)?.role;
+    const ROLES_PERMITIDOS = ["ADMINISTRADOR", "CONTADOR", "CAJERO", "TUTOR"];
+    if (!ROLES_PERMITIDOS.includes(rol)) {
       return NextResponse.json({ error: "No tiene permisos" }, { status: 403 });
     }
 
-    // await actualizarEstadosCargos();
-    console.log("Estados actualizados");
+    const url = new URL(req.url);
+    const tutorId = url.searchParams.get("tutorId");
+    const estudianteId = url.searchParams.get("estudianteId");
+    const tipo = url.searchParams.get("tipo");
+    const cursoIds = url.searchParams.getAll("cursoIds").map(id => parseInt(id));
+    const anioEscolarDesde = url.searchParams.get("anioEscolarDesde");
+    const anioEscolarHasta = url.searchParams.get("anioEscolarHasta");
 
-    const { searchParams } = new URL(req.url);
-    const fechaDesde = searchParams.get("fechaDesde") || undefined;
-    const fechaHasta = searchParams.get("fechaHasta") || undefined;
-    const tipo = searchParams.get("tipo");
-    const cuotasVencidas = searchParams.get("cuotasVencidas");
-    const anioEscolar = searchParams.get("anioEscolar");
-    const anioEscolarDesde = searchParams.get("anioEscolarDesde");
-    const anioEscolarHasta = searchParams.get("anioEscolarHasta");
-    const estudianteId = searchParams.get("estudianteId");
-    const cursoId = searchParams.get("cursoId");
-    const cursoIds = searchParams.getAll("cursoIds");
-
-    console.log("Parámetros recibidos:", { tipo, cursoIds, anioEscolarDesde, anioEscolarHasta });
+    // Obtener filtros de fecha
+    const fechaDesde = url.searchParams.get("fechaDesde");
+    const fechaHasta = url.searchParams.get("fechaHasta");
 
     const { fechaDesde: fechaInicio, fechaHasta: fechaFin } = ajustarFechasAPI(
       fechaDesde || undefined,
       fechaHasta || undefined
     );
 
-    const whereCargo: any = {
+    // Filtros para cargos
+    const filtroCargos: any = {
       estado: { in: [EstadoCargo.PENDIENTE, EstadoCargo.VENCIDO, EstadoCargo.ABONADO] },
       saldoPendiente: { gt: 0 },
     };
 
-    console.log("Where inicial:", JSON.stringify(whereCargo, null, 2));
-
-    if (estudianteId && !isNaN(parseInt(estudianteId))) {
-      whereCargo.estudianteId = parseInt(estudianteId);
+    if (fechaInicio) {
+      filtroCargos.fechaVencimiento = { gte: fechaInicio };
     }
-
-    if (fechaInicio) whereCargo.fechaVencimiento = { gte: fechaInicio };
-    if (fechaFin) whereCargo.fechaVencimiento = { ...whereCargo.fechaVencimiento, lte: fechaFin };
-
-    // Filtro de año escolar
-    if (anioEscolarDesde && anioEscolarHasta) {
-      whereCargo.anioEscolar = { gte: anioEscolarDesde, lte: anioEscolarHasta };
-    } else if (anioEscolar && anioEscolar !== "TODOS") {
-      whereCargo.anioEscolar = anioEscolar;
-    }
-
-    // Filtro de tipo y curso con lógica especial para inscripción
-    if (tipo && tipo !== "TODOS") {
-      whereCargo.tipo = tipo;
-      
-      // Las inscripciones no se filtran por curso porque son cargos generales del año escolar
-      if (tipo !== "INSCRIPCION" && cursoIds.length > 0) {
-        whereCargo.estudiante = {
-          seccion: {
-            cursoId: { in: cursoIds.map(id => parseInt(id)) }
-          }
-        };
-      }
-    } else if (cursoIds.length > 0) {
-      // Para el tipo TODOS aplicar el filtro de curso
-      whereCargo.estudiante = {
-        seccion: {
-          cursoId: { in: cursoIds.map(id => parseInt(id)) }
-        }
+    if (fechaFin) {
+      filtroCargos.fechaVencimiento = {
+        ...filtroCargos.fechaVencimiento,
+        lte: fechaFin
       };
     }
 
-    // Obtener todos los cargos con los filtros
+    if (tutorId) {
+      filtroCargos.tutorId = parseInt(tutorId);
+    }
+
+    if (estudianteId) {
+      filtroCargos.estudianteId = parseInt(estudianteId);
+    }
+
+    if (tipo && tipo !== "TODOS") {
+      filtroCargos.tipo = tipo;
+    }
+
+    // Filtro por cursos 
+    if (cursoIds.length > 0) {
+      const estudiantesEnCursos = await prisma.estudiante.findMany({
+        where: {
+          seccion: {
+            cursoId: { in: cursoIds }
+          }
+        },
+        select: { id: true }
+      });
+      
+      const estudianteIds = estudiantesEnCursos.map(e => e.id);
+      filtroCargos.estudianteId = { in: estudianteIds.length > 0 ? estudianteIds : [0] };
+    }
+
+    // Filtro por año escolar
+    if (anioEscolarDesde) {
+      filtroCargos.anioEscolar = { gte: anioEscolarDesde };
+    }
+    if (anioEscolarHasta) {
+      filtroCargos.anioEscolar = { ...filtroCargos.anioEscolar, lte: anioEscolarHasta };
+    }
+
+    // Filtros para cuentas por cobrar
+    const filtroCuentas: any = {
+      estado: { in: [EstadoCuenta.PENDIENTE, EstadoCuenta.VENCIDA, EstadoCuenta.ABONADA] },
+      saldoPendiente: { gt: 0 },
+    };
+
+    if (fechaInicio) {
+      filtroCuentas.fechaVencimiento = { gte: fechaInicio };
+    }
+    if (fechaFin) {
+      filtroCuentas.fechaVencimiento = {
+        ...filtroCuentas.fechaVencimiento,
+        lte: fechaFin
+      };
+    }
+
+    if (tutorId) {
+      filtroCuentas.tutorId = parseInt(tutorId);
+    }
+
+    if (tipo && tipo !== "TODOS") {
+      filtroCuentas.tipo = tipo;
+    }
+
+    // Si es tutor, validar que solo vea sus cuentas
+    if (rol === "TUTOR") {
+      const email = session.user?.email;
+      const tutor = await prisma.tutor.findUnique({
+        where: { email: email! },
+        select: { id: true }
+      });
+      
+      if (!tutor) {
+        return NextResponse.json({ error: "Tutor no encontrado" }, { status: 404 });
+      }
+      
+      filtroCargos.tutorId = tutor.id;
+      filtroCuentas.tutorId = tutor.id;
+    }
+
+    // Ejecutar consulta de cargos
     const cargos = await prisma.cargo.findMany({
-      where: whereCargo,
+      where: filtroCargos,
       include: {
         estudiante: {
-          select: { 
-            nombre: true, 
-            apellido: true, 
+          select: {
+            id: true,
             codigo: true,
+            nombre: true,
+            apellido: true,
             seccion: {
-              select: {
-                id: true,
-                codigo: true,
-                curso: {
-                  select: {
-                    id: true,
-                    codigo: true,
-                    grado: true,
-                    nivel: true,
-                  }
-                }
+              include: {
+                curso: true
               }
             }
           }
         },
         tutor: {
-          select: { cuentaNo: true, nombre: true, apellido: true }
+          select: {
+            id: true,
+            cuentaNo: true,
+            nombre: true,
+            apellido: true,
+          }
+        },
+        pagos: {  // Incluir los pagos relacionados
+          include: {
+            recibo: {  // Incluir el recibo para obtener la fecha
+              select: {
+                fecha: true,
+                reciboNo: true,
+                total: true,
+              }
+            }
+          },
+          orderBy: {
+            recibo: {
+              fecha: 'desc'  // Ordenar por fecha del recibo
+            }
+          },
+          take: 1,  // Solo el último pago
         }
       },
-      orderBy: [
-        { tutorId: 'asc' },
-        { estudianteId: 'asc' },
-        { fechaVencimiento: 'asc' }
-      ]
+      orderBy: { fechaVencimiento: "asc" },
     });
 
-    // Agrupar por tutor para calcular totales
-    const tutorMap = new Map();
-    for (const cargo of cargos) {
-      if (!tutorMap.has(cargo.tutorId)) {
-        tutorMap.set(cargo.tutorId, {
-          tutorId: cargo.tutorId,
-          cuenta: cargo.tutor.cuentaNo,
-          tutor: `${cargo.tutor.nombre} ${cargo.tutor.apellido}`,
-          cargos: [],
-          totalMonto: 0,
-          totalPagado: 0,
-        });
-      }
+    const cargosConFechaPago = cargos.map(cargo => {
+      // Obtener el último pago (ya ordenado)
+      const ultimoPago = cargo.pagos[0];
+      const fechaUltimoPago = ultimoPago?.recibo?.fecha || null;
       
-      const tutorData = tutorMap.get(cargo.tutorId);
-      tutorData.cargos.push(cargo);
-      tutorData.totalMonto += Number(cargo.montoTotal);
-      tutorData.totalPagado += Number(cargo.montoPagado);
-    }
+      return {
+        ...cargo,
+        fechaUltimoPago: fechaUltimoPago,
+        montoTotal: cargo.montoTotal.toString(),
+        montoPagado: cargo.montoPagado?.toString() || "0",
+        saldoPendiente: cargo.saldoPendiente.toString(),
+      };
+    });
 
-    // Filtrar por cantidad de cuotas vencidas
-    let resultados = Array.from(tutorMap.values());
-    if (cuotasVencidas && parseInt(cuotasVencidas) > 0) {
-      const minimoCuotas = parseInt(cuotasVencidas);
-      resultados = resultados.filter(tutor => {
-        const cargosVencidos = tutor.cargos.filter((cargo: any) => 
-          cargo.estado === EstadoCargo.VENCIDO
-        ).length;
-        return cargosVencidos >= minimoCuotas;
-      });
-    }
+    // Ejecutar consulta de cuentas por cobrar
+    const cuentasPorCobrar = await prisma.cuentaPorCobrar.findMany({
+      where: filtroCuentas,
+      include: {
+        tutor: {
+          select: {
+            id: true,
+            cuentaNo: true,
+            nombre: true,
+            apellido: true,
+          },
+        },
+      },
+      orderBy: { fechaVencimiento: "asc" },
+    });
 
-    // Calcular totales generales
-    const totalPendiente = resultados.reduce((sum, t) => sum + (Number(t.totalMonto) - Number(t.totalPagado)), 0);
-    const totalCobrado = resultados.reduce((sum, t) => sum + Number(t.totalPagado), 0);
-
-    console.log("=== [cuentas-por-cobrar] Fin exitoso ===");
+    // Calcular totales
+    const totalCargos = cargos.reduce((sum, c) => sum + c.saldoPendiente.toNumber(), 0);
+    const totalCuentas = cuentasPorCobrar.reduce((sum, c) => sum + c.saldoPendiente.toNumber(), 0);
 
     return NextResponse.json({
-      cuentas: resultados,
-      totalPendiente,
-      totalCobrado,
-      totalRegistros: resultados.length,
+      cargos: cargosConFechaPago,
+      cuentasPorCobrar,
+      totales: {
+        cargos: totalCargos,
+        cuentasPorCobrar: totalCuentas,
+      },
     });
   } catch (error) {
     console.error("Error GET /api/financiero/cuentas-por-cobrar:", error);

@@ -191,7 +191,7 @@ export default function TransportePage() {
 
   useEffect(() => {
     if (status === "authenticated" && aniosEscolares.length > 0) {
-      cargarVinculaciones();
+      cargarVinculacionesConFiltros(filtroEstadoActivo, filtroTipoActivo);
     }
   }, [anioEscolarIndex, aniosEscolares]);
 
@@ -413,12 +413,15 @@ export default function TransportePage() {
       if (filtroTipoActivo !== "TODOS") params.append("tipo", filtroTipoActivo);
       if (aniosEscolares[anioEscolarIndex]) params.append("anioEscolar", aniosEscolares[anioEscolarIndex]);
 
+      console.log("URL de petición:", `/api/transporte/vinculaciones?${params.toString()}`);
+
       const res = await fetch(`/api/transporte/vinculaciones?${params.toString()}`);
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data = await res.json();
-      setVinculaciones(data.vinculaciones || []);
-      
+
       console.log("Tipos de vinculaciones:", vinculaciones.map(v => v.tipo));
+
+      setVinculaciones(data.vinculaciones || []);
 
       setEstadisticas(data.estadisticas || {
         total: 0,
@@ -486,7 +489,7 @@ export default function TransportePage() {
         setError(data.error || "Error al cambiar estado");
       } else {
         setMensaje(data.mensaje || "Estado actualizado");
-        await cargarVinculaciones();
+        cargarVinculacionesConFiltros(filtroEstadoActivo, filtroTipoActivo);
         setModalVisible(false);
         setSelectedVinculacion(null);
         setNuevoEstado("");
@@ -668,6 +671,10 @@ export default function TransportePage() {
   };
 
   const aplicarFiltros = () => {
+    
+    console.log("Filtro estado seleccionado:", filtroEstadoForm);
+    console.log("Filtro tipo seleccionado:", filtroTipoForm);
+    
     // Normalizar los valores antes de enviar a la API
     let estadoNormalizado = filtroEstadoForm;
     let tipoNormalizado = filtroTipoForm;
@@ -676,10 +683,48 @@ export default function TransportePage() {
     if (estadoNormalizado !== "TODOS") {
       estadoNormalizado = estadoNormalizado.toUpperCase();
     }
+    
+    console.log("Estado normalizado:", estadoNormalizado);
+    console.log("Tipo normalizado:", tipoNormalizado);
+
     // Actualizar los filtros activos con los valores del formulario
     setFiltroEstadoActivo(estadoNormalizado);
     setFiltroTipoActivo(tipoNormalizado);
-    cargarVinculaciones();
+    
+    // Pasar los valores directamente a la función
+    cargarVinculacionesConFiltros(estadoNormalizado, tipoNormalizado);
+  };
+
+  // Función que recibe los filtros como parámetros
+  const cargarVinculacionesConFiltros = async (estado: string, tipo: string) => {
+    setCargandoVinculaciones(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (estado !== "TODOS") params.append("estado", estado);
+      if (tipo !== "TODOS") params.append("tipo", tipo);
+      if (aniosEscolares[anioEscolarIndex]) params.append("anioEscolar", aniosEscolares[anioEscolarIndex]);
+
+      console.log("URL de petición:", `/api/transporte/vinculaciones?${params.toString()}`);
+
+      const res = await fetch(`/api/transporte/vinculaciones?${params.toString()}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+      setVinculaciones(data.vinculaciones || []);
+      setEstadisticas(data.estadisticas || {
+        total: 0,
+        activos: 0,
+        suspendidos: 0,
+        cancelados: 0,
+        montoTotal: 0,
+      });
+    } catch (err) {
+      console.error("Error cargando vinculaciones:", err);
+      setError("Error al cargar los servicios de transporte");
+      setVinculaciones([]);
+    } finally {
+      setCargandoVinculaciones(false);
+    }
   };
 
   const limpiarFiltros = () => {
@@ -687,7 +732,7 @@ export default function TransportePage() {
     setFiltroTipoForm("TODOS");
     setFiltroEstadoActivo("TODOS");
     setFiltroTipoActivo("TODOS");
-    cargarVinculaciones();
+    cargarVinculacionesConFiltros("TODOS", "TODOS");
   };
 
   const formatMonto = (monto: any): string => {
@@ -840,23 +885,6 @@ export default function TransportePage() {
         {/* PESTAÑA ESTUDIANTES (Servicios Activos) */}
         {tab === "estudiantes" && (
           <div>
-            {/* Navegación por año escolar */}
-            <div style={s.navegacionAnioContainer}>
-              <div style={s.navegacionAnio}>
-                <button onClick={() => navegarAnio("primero")} style={s.btnNav} disabled={aniosEscolares.length === 0}>⏮ Primero</button>
-                <button onClick={() => navegarAnio("anterior")} style={s.btnNav} disabled={aniosEscolares.length === 0 || anioEscolarIndex === 0}>◀ Anterior</button>
-                <span style={s.navInfo}>
-                  {cargandoAnios ? "Cargando..." : (
-                    aniosEscolares.length > 0 
-                      ? `${anioEscolarIndex + 1} de ${aniosEscolares.length} - Año: ${aniosEscolares[anioEscolarIndex]}`
-                      : "No hay años escolares"
-                  )}
-                </span>
-                <button onClick={() => navegarAnio("siguiente")} style={s.btnNav} disabled={aniosEscolares.length === 0 || anioEscolarIndex === aniosEscolares.length - 1}>Siguiente ▶</button>
-                <button onClick={() => navegarAnio("ultimo")} style={s.btnNav} disabled={aniosEscolares.length === 0}>Último ⏭</button>
-              </div>
-            </div>
-
             <div style={s.statsContainer}>
               <div style={s.statCard}><strong>Total:</strong> {estadisticas.total}</div>
               <div style={s.statCardActivo}><strong>Activos:</strong> {estadisticas.activos}</div>
@@ -1050,7 +1078,7 @@ export default function TransportePage() {
                     placeholder="Buscar estudiante por código, nombre o apellido..."
                     isClearable
                     styles={{
-                      control: (base) => ({ ...base, padding: "4px", borderRadius: "7px", borderColor: "#ddd", minHeight: "42px" }),
+                      control: (base) => ({ ...base, padding: "4px", borderRadius: "7px", borderr: "1px solid #ddd", minHeight: "42px" }),
                       menu: (base) => ({ ...base, zIndex: 9999 }),
                     }}
                   />
@@ -1275,6 +1303,7 @@ export default function TransportePage() {
             </div>
           </div>
         )}
+
       </div>
     </main>
   );
@@ -1299,7 +1328,7 @@ const s: Record<string, React.CSSProperties> = {
   errorMsg: { background: "#fff5f5", border: "1px solid #fed7d7", color: "#c53030", borderRadius: "8px", padding: "12px 16px", marginBottom: "20px" },
   tabs: { display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" },
   tab: { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666" },
-  tabActivo: { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo: { border: "1px solid #2C1810", color: "#2C1810", background: "#EBF3FB" },
   vacio: { background: "#fff", borderRadius: "12px", padding: "40px", textAlign: "center", color: "#666" },
   rutasGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(500px, 1fr))", gap: "20px" },
   rutaCard: { background: "#fff", borderRadius: "12px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", transition: "all 0.3s ease" },

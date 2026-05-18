@@ -50,10 +50,6 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log("Tarifa activa:", tarifaActiva);
-    console.log("Configuraciones de cuotas:", tarifaActiva?.configuracionesCuotas);
-    console.log("Tarifas de transporte:", tarifaActiva?.tarifasTransporte);
-
     const anioEscolarActual = tarifaActiva?.anioEscolar;
 
     if (!anioEscolarActual || !tarifaActiva) {
@@ -112,11 +108,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Generar documentos
+    // 6. ⚠️ CAMBIO IMPORTANTE: Usar fecha y hora ACTUAL
+    const fechaActual = new Date();
     const docTrans = await obtenerSiguienteNumero("FA-TRAN");
-    const { fechaDesde: ahora } = ajustarFechasAPI(formatFechaLocal(new Date()), undefined);
-    const fechaActual = ahora || new Date();
     const horaActual = formatHoraLocal(fechaActual);
+    const fechaActualStr = formatFechaLocal(fechaActual);
+
+    console.log("📅 Generando factura de transporte con fecha:", fechaActualStr, horaActual);
 
     // 7. Obtener balance actual del tutor
     const ultimoMovimiento = await prisma.movimientoContable.findFirst({
@@ -125,7 +123,7 @@ export async function POST(request: Request) {
     });
     let balanceActual = ultimoMovimiento?.balance ? Number(ultimoMovimiento.balance) : 0;
 
-    // 8. Crear movimiento contable de un solo débito
+    // 8. Crear movimiento contable de un solo débito (con fecha ACTUAL)
     balanceActual += valorAnual;
     await prisma.movimientoContable.create({
       data: {
@@ -204,7 +202,7 @@ export async function POST(request: Request) {
           valorCargo: valorCuota,
           recargo: 0,
           montoTotal: valorCuota,
-          fechaEmision: fechaInicioDate,
+          fechaEmision: fechaActual, // ⚠️ Usar fecha ACTUAL
           fechaVencimiento,
           montoPagado: 0,
           saldoPendiente: valorCuota,

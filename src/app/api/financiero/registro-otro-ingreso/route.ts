@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { obtenerSiguienteNumero } from "@/lib/contador-secuencial";
 import { TipoMovimiento } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import { formatHoraLocal } from "@/lib/formatear-fecha";
 
 export async function POST(req: Request) {
@@ -21,53 +20,46 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { concepto, alPortador, estudianteId, monto, metodoPago, descripcion, fecha, contrasenaAutorizacion, origen } = body;
+    const { concepto, alPortador, estudianteId, monto, metodoPago, descripcion, fecha, origen } = body;
 
-    // 🔍 LOG 1: Datos recibidos
     console.log("=== [registro-otro-ingreso] Datos recibidos ===");
     console.log("concepto:", concepto);
     console.log("monto:", monto);
     console.log("metodoPago:", metodoPago);
-    console.log("origen recibido:", origen);
-    console.log("rol del usuario:", rol);
-    console.log("email:", session.user?.email);
     console.log("=============================================");
     
     if (!concepto || !alPortador || !monto || monto <= 0 || !metodoPago) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
     }
 
-    // Validar para concepto DERECHO A GRADUACIÓN si el tutor tiene saldo pendiente
+    // Validar para EXCURSION ESCOLAR que se haya seleccionado un estudiante
+    if (concepto === "EXCURSIÓN ESCOLAR" && !estudianteId) {
+      return NextResponse.json({ error: "Debe seleccionar un estudiante" }, { status: 400 });
+    }
+
+    // Validar para DERECHO A GRADUACIÓN que el tutor no tenga saldo pendiente
     if (concepto === "DERECHO A GRADUACIÓN" && estudianteId) {
-        const estudiante = await prisma.estudiante.findUnique({
+      const estudiante = await prisma.estudiante.findUnique({
         where: { id: estudianteId },
         include: { tutor: true }
-    });
+      });
 
-    // Validar para EXCURSION ESCOLAR que se haya seleccionado un estudiante
-    if (concepto === "EXCURSIÓN ESCOLAR") {
-        if (!estudianteId) {
-            return NextResponse.json({ error: "Debe seleccionar un estudiante" }, { status: 400 });
-        }
-    }
-
-    if (!estudiante || !estudiante.tutorId) {
+      if (!estudiante || !estudiante.tutorId) {
         return NextResponse.json({ error: "Estudiante no tiene tutor asignado" }, { status: 400 });
-    }
+      }
 
-    // Obtener el balance actual del tutor
-    const ultimoMovimiento = await prisma.movimientoContable.findFirst({
+      const ultimoMovimiento = await prisma.movimientoContable.findFirst({
         where: { tutorId: estudiante.tutorId },
         orderBy: { id: "desc" },
-    });
+      });
 
-    const balanceActual = ultimoMovimiento?.balance?.toNumber() || 0;
+      const balanceActual = ultimoMovimiento?.balance?.toNumber() || 0;
 
-    if (balanceActual !== 0) {
+      if (balanceActual !== 0) {
         return NextResponse.json({ 
-        error: `El tutor ${estudiante.tutor?.cuentaNo} - ${estudiante.tutor?.nombre} ${estudiante.tutor?.apellido} tiene un saldo pendiente de RD$${balanceActual.toFixed(2)}. Debe regularizar su cuenta antes de pagar el derecho a graduación.` 
+          error: `El tutor ${estudiante.tutor?.cuentaNo} - ${estudiante.tutor?.nombre} ${estudiante.tutor?.apellido} tiene un saldo pendiente de RD$${balanceActual.toFixed(2)}. Debe regularizar su cuenta antes de pagar el derecho a graduación.` 
         }, { status: 400 });
-    }
+      }
     }
 
     const reciboNo = await obtenerSiguienteNumero("RI");
@@ -89,31 +81,22 @@ export async function POST(req: Request) {
       }
     }
 
-    // Si no hay estudiante, usar tutor ficticio
+    // Si no hay estudiante, usar tutor genérico (solo buscar, no crear)
     if (!tutorId) {
-      let tutorVarios = await prisma.tutor.findFirst({
+      const tutorVarios = await prisma.tutor.findFirst({
         where: { cuentaNo: "999999" }
       });
       
       if (!tutorVarios) {
-        tutorVarios = await prisma.tutor.create({
-          data: {
-            cuentaNo: "999999",
-            nombre: "VARIOS",
-            apellido: "INGRESOS",
-            tipoDocIdentidad: "CEDULA",
-            numeroDocIdentidad: "00000000000",
-            email: "varios@colegio.edu",
-            ocupacion: "SISTEMA",
-            nombreContactoAlterno: "SISTEMA",
-          }
-        });
+        return NextResponse.json({ 
+          error: "Error de configuración: No se encuentra el tutor para ingresos varios. Contacte al administrador." 
+        }, { status: 500 });
       }
+      
       tutorId = tutorVarios.id;
     }
 
     const resultado = await prisma.$transaction(async (tx) => {
-      // Crear recibo sin cargo
       const recibo = await tx.reciboPago.create({
         data: {
           reciboNo,
@@ -129,19 +112,14 @@ export async function POST(req: Request) {
           concepto: concepto,
           alPortador: alPortador,
           descripcion: descripcion || `${concepto} - ${alPortador}`,
-          origen: "PRESENCIAL",
+          origen: origen || "PRESENCIAL",
         },
       });
 
-      // 🔍 LOG 2: Recibo creado
       console.log("=== [registro-otro-ingreso] Recibo creado ===");
       console.log("reciboNo:", recibo.reciboNo);
-      console.log("id:", recibo.id);
-      console.log("origen guardado:", (recibo as any).origen);
-      console.log("concepto:", recibo.concepto);
       console.log("============================================");
 
-      // Movimiento contable directo (ingreso)
       const ultimoMovimiento = await tx.movimientoContable.findFirst({
         where: { tutorId },
         orderBy: { id: "desc" },
@@ -150,15 +128,13 @@ export async function POST(req: Request) {
       let nuevoBalance = ultimoMovimiento?.balance?.toNumber() || 0;
       nuevoBalance += monto;
 
-      const descripcionMovimiento = descripcion || `${concepto} - ${alPortador}`;
-
       await tx.movimientoContable.create({
         data: {
           docNo: reciboNo,
           fecha: fechaRecibo,
           hora,
           tipo: TipoMovimiento.PAGO,
-          descripcion: descripcionMovimiento,
+          descripcion: descripcion || `${concepto} - ${alPortador}`,
           debito: 0,
           credito: monto,
           balance: nuevoBalance,

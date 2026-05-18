@@ -17,7 +17,7 @@ const modalStyles: Record<string, React.CSSProperties> = {
   modal: { background: "#fff", borderRadius: "12px", padding: "24px", width: "400px", maxWidth: "90%", },
   titulo: { fontSize: "18px", fontWeight: "bold", color: "#2C1810", marginBottom: "16px", },
   label: { fontSize: "13px", fontWeight: "bold", color: "#333", display: "block", marginBottom: "4px", },
-  input: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", marginBottom: "16px", },
+  input: {width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ddd", boxSizing: "border-box" },
   buttons: { display: "flex", gap: "12px", justifyContent: "flex-end", },
   btnConfirmar: { background: "#2C1810", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", cursor: "pointer", },
   btnCancelar: { background: "#6c757d", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", cursor: "pointer", },

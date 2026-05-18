@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AsyncSelect from "react-select/async";
+import NavBar from "@/components/NavBar";
+import { formatFechaLocal } from "@/lib/formatear-fecha";
 
 type Movimiento = {
   id: number;
@@ -161,12 +163,7 @@ export default function EstadoCuentaPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>📄 Estado de Cuenta</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Estado de Cuenta" icono="📄" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <h1 style={s.titulo}>Estado de Cuenta</h1>
@@ -277,14 +274,14 @@ export default function EstadoCuentaPage() {
               <table style={s.tabla}>
                 <thead>
                   <tr style={s.thead}>
-                    <th style={s.th}>Fecha</th>
-                    <th style={s.th}>DOC No.</th>
+                    <th style={{ ...s.th, minWidth: "100px" }}>Fecha</th>
+                    <th style={{ ...s.th, minWidth: "160px" }}>DOC No.</th>
                     <th style={s.th}>Descripción</th>
-                    <th style={s.th}>Débito</th>
-                    <th style={s.th}>Crédito</th>
-                    <th style={s.th}>Balance</th>
-                    <th style={s.th}>Realizado por</th>
-                    <th style={s.th}>Hora</th>
+                    <th style={{ ...s.th, minWidth: "100px", textAlign: "right" as const }}>Débito</th>
+                    <th style={{ ...s.th, minWidth: "100px", textAlign: "right" as const }}>Crédito</th>
+                    <th style={{ ...s.th, minWidth: "100px", textAlign: "right" as const }}>Balance</th>
+                    <th style={{ ...s.th, minWidth: "140px" }}>Realizado por</th>
+                    <th style={{ ...s.th, minWidth: "90px" }}>Hora</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -304,7 +301,7 @@ export default function EstadoCuentaPage() {
                       <td style={s.td}>{mov.credito > 0 ? formatMonto(mov.credito) : "—"}</td>
                       <td style={s.td}><strong>{formatMonto(mov.balance)}</strong></td>
                       <td style={s.td}>{mov.realizadoPor}</td>
-                      <td style={s.td}>{mov.hora}</td>
+                      <td style={s.td}>{formatFechaLocal(mov.fecha)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -333,7 +330,7 @@ const s: Record<string, React.CSSProperties> = {
   navBack: { color: "#fff", textDecoration: "none", fontSize: "14px" },
   navTitle: { fontWeight: "bold", fontSize: "16px" },
   navUser: { fontSize: "14px" },
-  contenido: { maxWidth: "1200px", margin: "0 auto", padding: "28px 20px" },
+  contenido: { maxWidth: "1400px", margin: "0 auto", padding: "20px", width: "100%", boxSizing: "border-box" as const },
   header: { marginBottom: "24px" },
   titulo: { fontSize: "22px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
   subtitulo: { fontSize: "13px", color: "#666", margin: 0 },
@@ -341,14 +338,14 @@ const s: Record<string, React.CSSProperties> = {
   tutorCard: { background: "#fff", borderRadius: "12px", padding: "16px 20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
   tutorGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "13px" },
   filtrosCard: { background: "#fff", borderRadius: "12px", padding: "20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
-  filtrosGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "16px" },
+  filtrosGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "8px" },
   label: { fontSize: "12px", fontWeight: "600", color: "#333", display: "block", marginBottom: "4px" },
-  input: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px" },
+  input: { width: "160px", padding: "8px", borderRadius: "6px", border: "1px solid #ddd" },
   btnFiltrar: { background: "#2C1810", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", cursor: "pointer" },
   btnLimpiar: { background: "#6c757d", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", fontSize: "13px", cursor: "pointer", marginLeft: "8px" },
   vacio: { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },
-  tablaWrap: { overflowX: "auto", overflowY: "auto", maxHeight: "500px", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", border: "1px solid #f0f0f0" },
-  tabla: { width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "800px" },
+  tablaWrap: { overflowX: "auto", overflowY: "auto", maxHeight: "600px", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", border: "1px solid #f0f0f0", scrollBehavior: "smooth" as const },
+  tabla: { width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "900px" },
   thead: { background: "linear-gradient(135deg,#2C1810,#4a2518)" },
   th: { padding: "12px 14px", color: "#fff", fontSize: "12px", fontWeight: "bold", textAlign: "left" },
   td: { padding: "10px 14px", borderBottom: "1px solid #f0f0f0" },

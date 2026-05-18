@@ -25,6 +25,25 @@ async function main() {
   await import('./seed_calendario')
   await import('./seed_circulares')
   await import('./seed_fix_circulares')
+
+// Crear tutor genérico para ingresos varios (solo si no existe)
+  const tutorVarios = await prisma.tutor.upsert({
+    where: { cuentaNo: "000000" },
+    update: {},
+    create: {
+      cuentaNo: "000000",
+      nombre: "VARIOS",
+      apellido: "INGRESOS",
+      tipoDocIdentidad: "CEDULA",
+      numeroDocIdentidad: "00000000000",
+      email: "varios_sistema@colegio.edu", // ← Email único y fijo
+      ocupacion: "SISTEMA",
+      nombreContactoAlterno: "SISTEMA",
+      telefonoContactoAlterno: "000-000-0000",
+    },
+  });
+
+  console.log("Tutor varios creado/verificado:", tutorVarios.cuentaNo);
 }
 
 main()

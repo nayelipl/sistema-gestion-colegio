@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useInformes } from "@/hooks/useInformes";
 import { ModalInforme } from "@/components/Modales/ModalInforme";
 import { formatFechaLarga } from "@/lib/formatear-fecha";
+import NavBar from "@/components/NavBar";
 
 type Tab = "filtros" | "informes";
 
@@ -13,7 +14,6 @@ type Cargo = {
   id: number;
   cargoNo: string;
   tipo: string;
-  valorCargo: number;
   recargo: number;
   montoTotal: number;
   fechaVencimiento: string;
@@ -86,8 +86,6 @@ export default function CuentasPorCobrarPage() {
     cuenta: true,
     tutor: true,
     cargoNo: true,
-    valorCargo: true,
-    cantidadCuotas: true,
     monto: true,
     fechaVencimiento: true,
     fechaPago: true,
@@ -214,10 +212,58 @@ export default function CuentasPorCobrarPage() {
 
       const res = await fetch(`/api/financiero/cuentas-por-cobrar?${params.toString()}`);
       const data = await res.json();
+      
+      console.log("Datos recibidos:", data);
+
       if (!res.ok) throw new Error(data.error);
-      setCuentasFiltros(data.cuentas || []);
-      setTotalPendienteFiltros(data.totalPendiente || 0);
-      setTotalCobradoFiltros(data.totalCobrado || 0);
+
+      const cargos = data.cargos || [];
+      const cuentasMap = new Map();
+      let totalPendienteGeneral = 0;
+      let totalCobradoGeneral = 0;
+
+      cargos.forEach((cargo: any) => {
+        const tutorId = cargo.tutorId;
+        const tutor = cargo.tutor;
+        const cuentaNo = tutor?.cuentaNo || `T-${tutorId}`;
+        const tutorNombre = tutor?.nombre || "Tutor";
+        const tutorApellido = tutor?.apellido || "";
+
+        if (!cuentasMap.has(tutorId)) {
+          cuentasMap.set(tutorId, {
+            tutorId: tutorId,
+            cuenta: cuentaNo,
+            tutor: `${tutorNombre} ${tutorApellido}`.trim(),
+            cargos: [],
+            totalMonto: 0,
+            totalPagado: 0,
+          });
+        }
+
+        const cuenta = cuentasMap.get(tutorId);
+        const montoTotal = cargo.montoTotal ? parseFloat(cargo.montoTotal) : 0;
+        const montoPagado = cargo.montoPagado ? parseFloat(cargo.montoPagado) : 0;
+        const saldoPendiente = cargo.saldoPendiente ? parseFloat(cargo.saldoPendiente) : 0;
+
+        cuenta.cargos.push({
+          ...cargo,
+          montoOriginal: montoTotal,
+          saldoPendiente: saldoPendiente,
+          montoPagado: montoPagado,
+        });
+        cuenta.totalMonto += montoTotal;
+        cuenta.totalPagado += montoPagado;
+        
+        totalPendienteGeneral += saldoPendiente;
+        totalCobradoGeneral += montoPagado;
+      });
+
+      const cuentasAgrupadas = Array.from(cuentasMap.values());
+
+      setCuentasFiltros(cuentasAgrupadas);
+      setTotalPendienteFiltros(totalPendienteGeneral);
+      setTotalCobradoFiltros(totalCobradoGeneral);
+
     } catch (error) {
       console.error("Error:", error);
       setError("Error al cargar cuentas por cobrar");
@@ -290,7 +336,6 @@ export default function CuentasPorCobrarPage() {
           id: cargo.id,
           cargoNo: cargo.cargoNo,
           tipo: cargo.tipo,
-          valorCargo: cargo.valorCargo ? Number(cargo.valorCargo) : 0,
           recargo: Number(cargo.recargo) || 0,
           montoTotal: Number(cargo.montoTotal) || 0,
           fechaVencimiento: cargo.fechaVencimiento,
@@ -356,7 +401,6 @@ export default function CuentasPorCobrarPage() {
           id: cargo.id,
           cargoNo: cargo.cargoNo,
           tipo: cargo.tipo,
-          valorCargo: cargo.valorCargo ? Number(cargo.valorCargo) : 0,
           recargo: Number(cargo.recargo),
           montoTotal: Number(cargo.montoTotal),
           fechaVencimiento: cargo.fechaVencimiento,
@@ -462,12 +506,7 @@ export default function CuentasPorCobrarPage() {
 
   return (
     <main style={s.main}>
-      <nav style={s.nav}>
-        <Link href="/dashboard" style={s.navBack}>← Volver al Dashboard</Link>
-        <span style={s.navTitle}>📊 Cuentas por Cobrar</span>
-        <span style={s.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Cuentas por Cobrar" icono="📊" userName={session?.user?.name} />
       <div style={s.contenido}>
         <div style={s.header}>
           <div>
@@ -579,7 +618,11 @@ export default function CuentasPorCobrarPage() {
               <div><strong>Total cobrado:</strong> {formatMonto(totalCobradoFiltros)}</div>
             </div>
 
-            {cargandoFiltros ? <div style={s.vacio}>Cargando...</div> : cuentasFiltros.length === 0 ? <div style={s.vacio}>No hay cuentas por cobrar registradas</div> : (
+            {cargandoFiltros ? (
+              <div style={s.vacio}>Cargando...</div>
+            ) : !Array.isArray(cuentasFiltros) || cuentasFiltros.length === 0 ? (
+              <div style={s.vacio}>No hay cuentas por cobrar registradas</div>
+            ) : (
               <div style={s.tablaWrap}>
                 <table style={s.tabla}>
                   <thead>
@@ -588,8 +631,6 @@ export default function CuentasPorCobrarPage() {
                       {columnas.cuenta && <th style={s.th}>Cuenta</th>}
                       {columnas.tutor && <th style={s.th}>Tutor</th>}
                       {columnas.cargoNo && <th style={s.th}>Cargo no.</th>}
-                      {columnas.valorCargo && <th style={s.th}>Valor cargo</th>}
-                      {columnas.cantidadCuotas && <th style={s.th}>Cant. cuotas</th>}
                       {columnas.monto && <th style={s.th}>Monto</th>}
                       {columnas.fechaVencimiento && <th style={s.th}>Fecha vencimiento</th>}
                       {columnas.fechaPago && <th style={s.th}>Fecha pago</th>}
@@ -600,28 +641,31 @@ export default function CuentasPorCobrarPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cuentasFiltros.map((cuenta, idx) => cuenta.cargos.map((cargo) => (
-                      <tr key={`${cuenta.tutorId}-${cargo.id}`}>{columnas.numero && <td style={s.td}>{idx + 1}</td>}
-                    {columnas.cuenta && <td style={s.td}>{cuenta.cuenta}</td>}
-                    {columnas.tutor && <td style={s.td}>{cuenta.tutor}</td>}
-                    {columnas.cargoNo && <td style={s.td}>{cargo.cargoNo}</td>}
-                    {columnas.valorCargo && <td style={s.td}>{formatMonto(Number(cargo.valorCargo))}</td>}
-                    {columnas.cantidadCuotas && <td style={s.td}>1</td>}
-                    {columnas.monto && <td style={s.td}>{formatMonto(Number(cargo.saldoPendiente))}</td>}
-                    {columnas.fechaVencimiento && <td style={s.td}>{formatFechaLarga(cargo.fechaVencimiento)}</td>}
-                    {columnas.fechaPago && <td style={s.td}>{cargo.fechaUltimoPago ? formatFechaLarga(cargo.fechaUltimoPago) : "—"}</td>}
-                    {columnas.montoPago && <td style={s.td}>{cargo.montoPagado > 0 ? formatMonto(Number(cargo.montoPagado)) : "—"}</td>}
-                    {columnas.balance && <td style={s.td}>{formatMonto(Number(cargo.saldoPendiente))}</td>}
-                    {columnas.estado && <td style={s.td}>{getEstadoBadge(cargo.estado)}</td>}
-                    {columnas.actualizadoEn && <td style={s.td}>{new Date(cargo.actualizadoEn || "").toLocaleString()}</td>}
-                    </tr>)
-                  ))}
+                    {cuentasFiltros.map((cuenta, idx) => (
+                      cuenta.cargos && cuenta.cargos.map((cargo) => (
+                        <tr key={`${cuenta.tutorId}-${cargo.id}`}>
+                          {columnas.numero && <td style={s.td}>{idx + 1}</td>}
+                          {columnas.cuenta && <td style={s.td}>{cuenta.cuenta}</td>}
+                          {columnas.tutor && <td style={s.td}>{cuenta.tutor}</td>}
+                          {columnas.cargoNo && <td style={s.td}>{cargo.cargoNo}</td>}
+                          {columnas.monto && <td style={s.td}>{formatMonto(Number(cargo.saldoPendiente))}</td>}
+                          {columnas.fechaVencimiento && <td style={s.td}>{formatFechaLarga(cargo.fechaVencimiento)}</td>}
+                          {columnas.fechaPago && <td style={s.td}>{cargo.fechaUltimoPago ? formatFechaLarga(cargo.fechaUltimoPago) : "—"}</td>}
+                          {columnas.montoPago && <td style={s.td}>{cargo.montoPagado > 0 ? formatMonto(Number(cargo.montoPagado)) : "—"}</td>}
+                          {columnas.balance && <td style={s.td}>{formatMonto(Number(cargo.saldoPendiente))}</td>}
+                          {columnas.estado && <td style={s.td}>{getEstadoBadge(cargo.estado)}</td>}
+                          {columnas.actualizadoEn && <td style={s.td}>{new Date(cargo.actualizadoEn || "").toLocaleString()}</td>}
+                        </tr>
+                      ))
+                    ))}
                   </tbody>
-                  <tfoot><tr style={s.tfoot}>
-                    <td colSpan={Object.values(columnas).filter(Boolean).length - 4} style={s.td}><strong>TOTALES:</strong></td>
-                    <td style={s.td}><strong>{formatMonto(totalPendienteFiltros)}</strong></td>
-                    <td style={s.td}><strong>{formatMonto(totalCobradoFiltros)}</strong></td>
-                    </tr></tfoot>
+                  <tfoot>
+                    <tr style={s.tfoot}>
+                      <td colSpan={Object.values(columnas).filter(Boolean).length - 4} style={s.td}><strong>TOTALES:</strong></td>
+                      <td style={s.td}><strong>{formatMonto(totalPendienteFiltros)}</strong></td>
+                      <td style={s.td}><strong>{formatMonto(totalCobradoFiltros)}</strong></td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}
@@ -804,8 +848,6 @@ export default function CuentasPorCobrarPage() {
                           {columnas.cuenta && <th style={s.th}>Cuenta</th>}
                           {columnas.tutor && <th style={s.th}>Tutor</th>}
                           {columnas.cargoNo && <th style={s.th}>Cargo no.</th>}
-                          {columnas.valorCargo && <th style={s.th}>Valor cargo</th>}
-                          {columnas.cantidadCuotas && <th style={s.th}>Cant. cuotas</th>}
                           {columnas.monto && <th style={s.th}>Monto</th>}
                           {columnas.fechaVencimiento && <th style={s.th}>Fecha vencimiento</th>}
                           {columnas.fechaPago && <th style={s.th}>Fecha pago</th>}
@@ -823,8 +865,6 @@ export default function CuentasPorCobrarPage() {
                               {columnas.cuenta && <td style={s.td}>{cuenta.cuenta}</td>}
                               {columnas.tutor && <td style={s.td}>{cuenta.tutor}</td>}
                               {columnas.cargoNo && <td style={s.td}>{cargo.cargoNo}</td>}
-                              {columnas.valorCargo && <td style={s.td}>{formatMonto(Number(cargo.valorCargo))}</td>}
-                              {columnas.cantidadCuotas && <td style={s.td}>1</td>}
                               {columnas.monto && <td style={s.td}>{formatMonto(Number(cargo.saldoPendiente))}</td>}
                               {columnas.fechaVencimiento && <td style={s.td}>{formatFechaLarga(cargo.fechaVencimiento)}</td>}
                               {columnas.fechaPago && <td style={s.td}>{cargo.fechaUltimoPago ? formatFechaLarga(cargo.fechaUltimoPago) : "—"}</td>}
@@ -838,7 +878,7 @@ export default function CuentasPorCobrarPage() {
                       </tbody>
                       <tfoot>
                         <tr style={s.tfoot}>
-                          <td colSpan={Object.values(columnas).filter(Boolean).length - 2} style={s.td}><strong>TOTALES:</strong></td>
+                          <td colSpan={Object.values(columnas).filter(Boolean).length - 4} style={s.td}><strong>TOTALES:</strong></td>
                           <td style={s.td}><strong>{formatMonto(totalPendienteInforme)}</strong></td>
                           <td style={s.td}><strong>{formatMonto(totalCobradoInforme)}</strong></td>
                         </tr>
@@ -873,7 +913,7 @@ const s: Record<string, React.CSSProperties> = {
   navBack: { color: "#fff", textDecoration: "none", fontSize: "14px" },
   navTitle: { fontWeight: "bold", fontSize: "16px" },
   navUser: { fontSize: "14px" },
-  contenido: { maxWidth: "1400px", margin: "0 auto", padding: "20px", width: "100%", boxSizing: "border-box" as const },
+  contenido: { maxWidth: "1600px", margin: "0 auto", padding: "20px", width: "100%", boxSizing: "border-box" as const },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" },
   titulo: { fontSize: "22px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
   subtitulo: { fontSize: "13px", color: "#666", margin: 0 },
@@ -891,11 +931,11 @@ const s: Record<string, React.CSSProperties> = {
   btnLimpiar: { background: "#6c757d", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", cursor: "pointer", marginLeft: "8px" },
   totalesCard: { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", borderRadius: "12px", padding: "16px 20px", marginBottom: "20px", display: "flex", justifyContent: "space-between" },
   vacio: { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },
-  tablaWrap: { overflowX: "auto", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", width: "100%" },
-  tabla: { width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "800px" },
+  tablaWrap: { overflowX: "auto", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", width: "100%", maxHeight: "600px", minHeight: "400px" },
+  tabla: { width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "1000px" },
   thead: { background: "linear-gradient(135deg,#2C1810,#4a2518)" },
-  th: { padding: "12px 12px", color: "#fff", fontSize: "12px", fontWeight: "bold", textAlign: "left", whiteSpace: "nowrap" as const },
-  td: { padding: "10px 12px", borderBottom: "1px solid #f0f0f0", fontSize: "12px", whiteSpace: "nowrap" as const },
+  th: { padding: "14px 16px", color: "#fff", fontSize: "13px", fontWeight: "bold", textAlign: "left", whiteSpace: "nowrap" as const },
+  td: { padding: "12px 16px", borderBottom: "1px solid #f0f0f0", fontSize: "12px", whiteSpace: "nowrap" as const },
   tfoot: { background: "#f0f4f8", fontWeight: "bold" },
   badgeCorriente: { background: "#c6f6d5", color: "#276749", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },
   badgePendiente: { background: "#fefcbf", color: "#744210", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },

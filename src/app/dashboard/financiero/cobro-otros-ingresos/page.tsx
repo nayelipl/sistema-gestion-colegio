@@ -9,6 +9,7 @@ import { ModalDetalleRecibo } from "@/components/Modales/ModalDetalleRecibo";
 import { formatFechaLocal } from "@/lib/formatear-fecha";
 import { useImprimir } from "@/hooks/useImprimir";
 import { ImprimirContenido } from "@/components/ImprimirContenido";
+import NavBar from "@/components/NavBar";
 
 type Tab = "cobro" | "recibos";
 
@@ -304,12 +305,7 @@ export default function CobroOtrosIngresosPage() {
 
   return (
     <main style={styles.main}>
-      <nav style={styles.nav}>
-        <Link href="/dashboard" style={styles.navBack}>← Volver al Dashboard</Link>
-        <span style={styles.navTitle}>💰 Cobro de Otros Ingresos</span>
-        <span style={styles.navUser}>👤 {session?.user?.name}</span>
-      </nav>
-
+      <NavBar titulo="Cobro de Otros Ingresos" icono="💰" userName={session?.user?.name} />
       <div style={styles.contenido}>
         <div style={styles.header}>
           <h1 style={styles.titulo}>Cobro de Otros Ingresos</h1>

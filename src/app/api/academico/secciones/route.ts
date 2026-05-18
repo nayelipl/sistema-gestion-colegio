@@ -2,17 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verificarPermiso } from "@/lib/auth-helper";
 
-const ROLES_LECTURA  = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA","SECRETARIA_DOCENTE","MAESTRO","ORIENTADOR_ESCOLAR"];
+const ROLES_LECTURA = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA","SECRETARIA_DOCENTE","MAESTRO","ORIENTADOR_ESCOLAR"];
 const ROLES_ESCRITURA = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA"];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const incluirInactivas = searchParams.get("incluirInactivas") === "true";
+    
+    const where = incluirInactivas ? {} : { activo: true };
+    
     const secciones = await prisma.seccion.findMany({
+      where,
       orderBy: { codigo: "asc" },
-      include: { curso: true, maestroEncargado: true },
+      include: { 
+        curso: true, 
+        maestroEncargado: true 
+      },
     });
+    
     return NextResponse.json({ secciones });
   } catch (error) {
+    console.error("Error al obtener secciones:", error);
     return NextResponse.json({ error: "Error al obtener secciones." }, { status: 500 });
   }
 }
@@ -42,6 +53,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ mensaje: "Sección creada exitosamente.", seccion }, { status: 201 });
   } catch (error) {
+    console.error("Error al crear sección:", error);
     return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });
   }
 }
