@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { formatFechaLocal } from "@/lib/formatear-fecha";
 import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
 import AsyncSelect from "react-select/async";
@@ -97,7 +96,9 @@ export default function CobroCargosPage() {
   const [fechaHastaRecibo, setFechaHastaRecibo] = useState("");
   const [tutorFiltro, setTutorFiltro] = useState("");
   const [mostrarModalContrasena, setMostrarModalContrasena] = useState(false);
+  const [reciboParaImprimir, setReciboParaImprimir] = useState<any>(null);
   const [reciboParaAnular, setReciboParaAnular] = useState<Recibo | null>(null);
+  const { componentRef, handleImprimir } = useImprimir();
   const [reciboSeleccionado, setReciboSeleccionado] = useState<Recibo | null>(null);
   const [mostrarModalDetalle, setMostrarModalDetalle] = useState(false);
   const [tutorSeleccionadoFiltro, setTutorSeleccionadoFiltro] = useState<any>(null);
@@ -106,10 +107,6 @@ export default function CobroCargosPage() {
     concepto: "TODOS",
     fechaHasta: formatFechaLocal(new Date())
   });
-
-  const { componentRef, handleImprimir } = useImprimir();
-  const [reciboParaImprimir, setReciboParaImprimir] = useState<any>(null);
-  const [reciboRecienCreado, setReciboRecienCreado] = useState<Recibo | null>(null);
 
   const ROLES_PERMITIDOS = ["ADMINISTRADOR", "CONTADOR", "CAJERO"];
 
@@ -195,7 +192,7 @@ export default function CobroCargosPage() {
       }
       
       setCargosFiltrados(filtrados);
-      const balance = filtrados.reduce((sum: number, c: Cargo) => sum + (c.saldoPendiente + (c.recargo || 0)), 0);
+      const balance = filtrados.reduce((sum: number, c: Cargo) => sum + (c.monto + c.recargo), 0);
       setBalanceFiltrado(balance);
       setCargosSeleccionados({});
       return;
@@ -289,25 +286,26 @@ export default function CobroCargosPage() {
       if (nuevo[cargo.id]) {
         delete nuevo[cargo.id];
       } else {
-        // El valor total a pagar es saldoPendiente + recargo
-        nuevo[cargo.id] = (cargo.saldoPendiente || 0) + (cargo.recargo || 0);
+        // El valor total a pagar es monto + recargo
+        nuevo[cargo.id] = (cargo.monto || 0) + (cargo.recargo || 0);
       }
       return nuevo;
     });
   };
 
   const obtenerEstadoCuota = (cargo: Cargo, valorCobrado: number | undefined): string => {
-    const saldoPendiente = cargo.saldoPendiente || 0;
+    const montoOriginal = cargo.monto || 0;
     const recargo = cargo.recargo || 0;
-    const totalDeuda = saldoPendiente + recargo;
+    const totalDeuda = montoOriginal + recargo;
+    const valor = valorCobrado || 0;
     
-    if (!valorCobrado || valorCobrado === 0) {
+    if (!valor || valorCobrado === 0) {
       return "NO AFECTA";
     }
-    else if (valorCobrado < totalDeuda) {
+    else if (valor < totalDeuda) {
       return "ABONO";
     }
-    else if (valorCobrado === totalDeuda) {
+    else if (valor === totalDeuda) {
       return "SALDO";
     }
     // Si es mayor (esto debería manejarse con la redistribución)
@@ -332,7 +330,7 @@ export default function CobroCargosPage() {
     Object.entries(cargosSeleccionados).forEach(([id, valorCobrado]) => {
       const cargo = cargosFiltrados.find(c => c.id === parseInt(id));
       if (cargo && valorCobrado && valorCobrado > 0) {
-        const montoOriginal = cargo.saldoPendiente || 0;
+        const montoOriginal = cargo.monto || 0;
         const recargo = cargo.recargo || 0;
                 
         // Primero se paga el monto original, luego el recargo
@@ -403,22 +401,32 @@ export default function CobroCargosPage() {
 
       setExito(`${data.mensaje} - Recibo: ${data.reciboNo}`);
       
-      const reciboParaImprimir = {
+      const nuevoRecibo = {
+        id: 0,
         reciboNo: data.reciboNo,
-        fecha: new Date(),
+        fecha: new Date().toISOString(),
+        hora: new Date().toLocaleTimeString("es-DO"),
         subTotal,
         recargoTotal,
         total,
         metodoPago,
         realizadoPor: session?.user?.name,
         tutor: tutorSeleccionado,
-        pagos: pagos.map(pago => ({
-          montoPagado: pago.montoPagado,
-          cargo: cargosFiltrados.find(c => c.id === pago.cargoId)?.cargoNo || "",
-        })),
+        pagos: pagos.map(pago => {
+          const cargo = cargosFiltrados.find(c => c.id === pago.cargoId);
+          return {
+            montoPagado: pago.montoPagado,
+            cargo: {
+              cargoNo: cargo?.cargoNo || "",
+              tipo: cargo?.tipo || "COLEGIATURA"
+            }
+          };
+        }),
       };
       
-      setReciboRecienCreado(reciboParaImprimir as any);
+      setReciboSeleccionado(nuevoRecibo as any);
+      setMostrarModalDetalle(true);
+
       setCargosSeleccionados({});
       setMetodoPago("");
       setCargosFiltrados([]);
@@ -476,13 +484,22 @@ export default function CobroCargosPage() {
       metodoPago: recibo.metodoPago,
       realizadoPor: recibo.realizadoPor,
       tutor: recibo.tutor,
-      pagos: recibo.pagos,
+      pagos: recibo.pagos.map(p => ({
+        montoPagado: p.montoPagado,
+        cargo: {
+          cargoNo: p.cargo.cargoNo,
+          tipo: p.cargo.tipo
+        }
+      })),
       anulado: recibo.anulado,
       motivoAnulacion: recibo.motivoAnulacion,
     };
     
     setReciboParaImprimir(datosParaImprimir);
-    setTimeout(() => handleImprimir(), 100);
+    setTimeout(() => {
+      handleImprimir();
+      setReciboParaImprimir(null);
+    }, 100);
   };
 
   const anularRecibo = async (recibo: Recibo, contrasena?: string) => {
@@ -541,6 +558,12 @@ export default function CobroCargosPage() {
     setMostrarModalDetalle(true);
   };
 
+  const handlePrintRecibo = () => {
+    if (reciboSeleccionado) {
+      handleImprimir();
+    }
+  };
+
   const limpiarFiltrosRecibos = () => {
     setFechaDesdeRecibo("");
     setFechaHastaRecibo("");
@@ -557,16 +580,13 @@ export default function CobroCargosPage() {
     valorActual: number; 
     actualizarValor: (cargoId: number, valor: number) => void;
   }) => {
-    const [valorLocal, setValorLocal] = useState<string>(valorActual?.toString() || "");
+    const [valorLocal, setValorLocal] = useState<string>(valorActual && valorActual > 0 ? valorActual.toString() : "");
     const inputRef = useRef<HTMLInputElement>(null);
 
     const aplicarValor = () => {
-      const valor = parseFloat(valorLocal);
-      if (!isNaN(valor)) {
-        actualizarValor(cargo.id, Math.round(valor * 100) / 100);
-      } else {
-        actualizarValor(cargo.id, 0);
-      }
+      let valor = parseFloat(valorLocal);
+      if (isNaN(valor)) valor = 0;
+      actualizarValor(cargo.id, Math.round(valor * 100) / 100);
     };
 
     const handleBlur = () => {
@@ -581,7 +601,8 @@ export default function CobroCargosPage() {
     };
 
     useEffect(() => {
-      setValorLocal(valorActual?.toString() || "");
+      // Actualizar cuando cambia valorLocal
+      setValorLocal(valorActual && valorActual > 0 ? valorActual.toString() : "");
     }, [valorActual, cargo.id]);
 
     return (
@@ -714,9 +735,7 @@ export default function CobroCargosPage() {
                     </thead>
                     <tbody>
                       {cargosFiltrados.filter(c => c).map((cargo) => {
-                        const montoTotal = (cargo.monto || 0) + (cargo.recargo || 0);
-                        const estaSeleccionado = !!cargosSeleccionados[cargo.id];
-                        const valorCobradoActual = cargosSeleccionados[cargo.id];
+                        const valorCobradoActual = cargosSeleccionados[cargo.id] || 0;
                         const estadoCuota = obtenerEstadoCuota(cargo, valorCobradoActual);
                         
                         const getBadgeStyle = () => {
@@ -731,7 +750,7 @@ export default function CobroCargosPage() {
                           <tr key={cargo.id}>
                             <td style={s.td}>{cargo.cargoNo}</td>
                             <td style={s.td}>{new Date(cargo.fechaVencimiento).toLocaleDateString("es-DO")}</td>
-                            <td style={s.td}>RD${(cargo.saldoPendiente || 0).toFixed(2)}</td>
+                            <td style={s.td}>RD${(cargo.monto || 0).toFixed(2)}</td>
                             <td style={s.td}>RD${(cargo.recargo || 0).toFixed(2)}</td>
                             <td style={s.td}>
                               <InputValorCobrado
@@ -834,7 +853,7 @@ export default function CobroCargosPage() {
                       ...base, 
                       padding: "4px", 
                       borderRadius: "7px", 
-                      borderColor: "#ddd",
+                      border: "1px solid #ddd",
                       minHeight: "38px"
                     }),
                     menu: (base) => ({ ...base, zIndex: 9999 }),
@@ -888,7 +907,7 @@ export default function CobroCargosPage() {
                         </td>
                         <td style={s.td}>
                           <button onClick={() => verDetalleRecibo(recibo)} style={s.btnVer}>👁️ Ver</button>
-                          <button onClick={() => imprimirRecibo(recibo)} style={s.btnImprimir} disabled={!reciboSeleccionado}>🖨️ Imprimir</button>
+                          <button onClick={() => imprimirRecibo(recibo)} style={s.btnImprimir}>🖨️ Imprimir</button>
                           {!recibo.anulado && (
                             <button onClick={() => handleAnularRecibo(recibo)} style={s.btnAnular}>🚫 Anular</button>
                           )}
@@ -921,24 +940,35 @@ export default function CobroCargosPage() {
         />
 
         {/* Componente oculto para imprimir */}
-        <div style={{ display: "none" }}>
-          {reciboRecienCreado && (
-            <ImprimirContenido
-              ref={componentRef}
-              titulo="Recibo de Pago"
-              datos={reciboRecienCreado}
-              tipo="recibo-cargos"
-            />
-          )}
-          {reciboParaImprimir && (
-            <ImprimirContenido
-              ref={componentRef}
-              titulo="Recibo de Pago"
-              datos={reciboParaImprimir}
-              tipo="recibo-cargos"
-            />
-          )}
-        </div>
+        <ModalDetalleReciboCargos
+          isOpen={mostrarModalDetalle}
+          onClose={() => {
+            setMostrarModalDetalle(false);
+            setReciboSeleccionado(null);
+          }}
+          onPrint={handlePrintRecibo}
+          recibo={reciboSeleccionado}
+          />
+
+          {/* Componente oculto para imprimir */}
+          <div style={{ display: "none" }}>
+            {reciboParaImprimir && (
+              <ImprimirContenido
+                ref={componentRef}
+                titulo="Recibo de Pago"
+                datos={reciboParaImprimir}
+                tipo="recibo-cargos"
+              />
+            )}
+            {reciboSeleccionado && (
+              <ImprimirContenido
+                ref={componentRef}
+                titulo="Recibo de Pago"
+                datos={reciboSeleccionado}
+                tipo="recibo-cargos"
+              />
+            )}
+          </div>
       </div>
     </main>
   );
@@ -959,7 +989,7 @@ const s: Record<string, React.CSSProperties> = {
   errorMsg: { background: "#fff5f5", border: "1px solid #fed7d7", color: "#c53030", borderRadius: "8px", padding: "12px 16px", marginBottom: "16px", fontSize: "13px" },
   tabs: { display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" },
   tab: { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666" },
-  tabActivo: { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo: { border: "1px solid #2C1810", color: "#2C1810", background: "#EBF3FB" },
   infoBar: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff", borderRadius: "12px", padding: "16px 20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
   tutorHeader: { display: "flex", alignItems: "center", gap: "16px", flex: 1, marginLeft: "20px" },
   label: { fontSize: "13px", fontWeight: "bold", color: "#333", display: "block", marginBottom: "4px" },

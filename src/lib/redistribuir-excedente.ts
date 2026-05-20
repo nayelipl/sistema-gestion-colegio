@@ -9,7 +9,7 @@ export function redistribuirExcedente(
   if (cargoIndex === -1) return cargosSeleccionados;
   
   const cargo = cargosFiltrados[cargoIndex];
-  const montoTotal = (cargo.saldoPendiente || 0) + (cargo.recargo || 0);
+  const montoTotal = (cargo.monto || 0) + (cargo.recargo || 0);
   
   let valorAjustado = isNaN(nuevoValor) ? 0 : Math.round(nuevoValor * 100) / 100;
   valorAjustado = Math.max(0, valorAjustado);
@@ -29,7 +29,7 @@ export function redistribuirExcedente(
     let excedenteRestante = excedente;
     for (let i = cargoIndex + 1; i < cargosFiltrados.length && excedenteRestante > 0; i++) {
       const cargoSig = cargosFiltrados[i];
-      const montoMaxSig = (cargoSig.saldoPendiente || 0) + (cargoSig.recargo || 0);
+      const montoMaxSig = (cargoSig.monto || 0) + (cargoSig.recargo || 0);
       const valorActualSig = nuevosSeleccionados[cargoSig.id] || 0;
       const espacioDisponible = montoMaxSig - valorActualSig;
       

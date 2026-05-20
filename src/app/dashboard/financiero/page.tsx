@@ -248,7 +248,7 @@ export default function FinancieroPage() {
                 <p style={s.resumenLabel}>Total en línea</p>
                 <p style={s.resumenValor}>RD$ {totalOnline.toLocaleString()}</p>
               </div>
-              <div style={{ ...s.resumenCard, borderColor: "#C0392B" }}>
+              <div style={{ ...s.resumenCard, border: "1px solid #C0392B" }}>
                 <p style={s.resumenLabel}>Total general</p>
                 <p style={{ ...s.resumenValor, color: "#C0392B" }}>RD$ {totalCorte.toLocaleString()}</p>
               </div>
@@ -336,7 +336,7 @@ const s: Record<string, React.CSSProperties> = {
   subtitulo:     { fontSize: "13px", color: "#666", margin: 0 },
   tabs:          { display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" as any },
   tab:           { padding: "10px 16px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666" },
-  tabActivo:     { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo:     { border: "1px solid #2C1810", color: "#2C1810", background: "#EBF3FB" },
   card:          { background: "#fff", borderRadius: "12px", padding: "28px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
   cardTitulo:    { fontSize: "16px", fontWeight: "bold", color: "#2C1810", margin: "0 0 20px" },
   grid:          { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" },

@@ -5,7 +5,7 @@ import { verificarPermiso } from "@/lib/auth-helper";
 const ROLES_VER = [
   "ADMINISTRADOR", "CAJERO", "SECRETARIA_DOCENTE",
   "DIRECCION_ACADEMICA", "COORDINACION_ACADEMICA",
-  "ORIENTADOR_ESCOLAR", "MAESTRO",
+  "ORIENTADOR_ESCOLAR", "MAESTRO", "DIRECTOR_ADMINISTRATIVO"
 ];
 
 export async function GET() {

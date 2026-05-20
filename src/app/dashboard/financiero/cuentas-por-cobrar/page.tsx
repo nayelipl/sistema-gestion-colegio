@@ -217,7 +217,10 @@ export default function CuentasPorCobrarPage() {
 
       if (!res.ok) throw new Error(data.error);
 
-      const cargos = data.cargos || [];
+      let cargos = [...(data.cargos || []), ...(data.cuentasPorCobrar || [])];
+      
+      console.log("Cargos a procesar:", cargos.length);
+
       const cuentasMap = new Map();
       let totalPendienteGeneral = 0;
       let totalCobradoGeneral = 0;
@@ -246,17 +249,24 @@ export default function CuentasPorCobrarPage() {
         const saldoPendiente = cargo.saldoPendiente ? parseFloat(cargo.saldoPendiente) : 0;
 
         cuenta.cargos.push({
-          ...cargo,
-          montoOriginal: montoTotal,
-          saldoPendiente: saldoPendiente,
-          montoPagado: montoPagado,
-        });
-        cuenta.totalMonto += montoTotal;
-        cuenta.totalPagado += montoPagado;
-        
-        totalPendienteGeneral += saldoPendiente;
-        totalCobradoGeneral += montoPagado;
+        id: cargo.id,
+        cargoNo: cargo.cargoNo,
+        tipo: cargo.tipo,
+        recargo: cargo.recargo ? parseFloat(cargo.recargo) : 0,
+        montoTotal: montoTotal,
+        fechaVencimiento: cargo.fechaVencimiento,
+        montoPagado: montoPagado,
+        saldoPendiente: saldoPendiente,
+        estado: cargo.estado,
+        fechaUltimoPago: cargo.fechaUltimoPago,
+        actualizadoEn: cargo.actualizadoEn,
       });
+      cuenta.totalMonto += montoTotal;
+      cuenta.totalPagado += montoPagado;
+      
+      totalPendienteGeneral += saldoPendiente;
+      totalCobradoGeneral += montoPagado;
+    });
 
       const cuentasAgrupadas = Array.from(cuentasMap.values());
 
@@ -492,11 +502,16 @@ export default function CuentasPorCobrarPage() {
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
+      // Para cuentas por cobrar
       case "CORRIENTE": return <span style={s.badgeCorriente}>🟢 CORRIENTE</span>;
       case "PENDIENTE": return <span style={s.badgePendiente}>🟡 PENDIENTE</span>;
-      case "VENCIDO": return <span style={s.badgeVencido}>🔴 VENCIDO</span>;
+      case "VENCIDA": return <span style={s.badgeVencida}>🔴 VENCIDA</span>;
       case "ABONADA": return <span style={s.badgeAbonada}>🟠 ABONADA</span>;
       case "SALDA": return <span style={s.badgeSalda}>✅ SALDA</span>;
+      // Para cargos
+      case "VENCIDO": return <span style={s.badgeVencida}>🔴 VENCIDO</span>;
+      case "ABONADO": return <span style={s.badgeAbonada}>🟠 ABONADO</span>;
+      case "SALDO": return <span style={s.badgeSalda}>✅ SALDO</span>;
       default: return <span>{estado}</span>;
     }
   };
@@ -641,10 +656,16 @@ export default function CuentasPorCobrarPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {cuentasFiltros.map((cuenta, idx) => (
-                      cuenta.cargos && cuenta.cargos.map((cargo) => (
-                        <tr key={`${cuenta.tutorId}-${cargo.id}`}>
-                          {columnas.numero && <td style={s.td}>{idx + 1}</td>}
+                    {cuentasFiltros.flatMap((cuenta, idxCuenta) => 
+                      (cuenta.cargos || []).map((cargo, idxCargo) => {
+                        {/* Contador de cargos pendientes por tutor, se reinicia con un nuevo tutor */}
+                        const rowNumber = idxCargo + 1;
+                        return (
+                          <tr key={`row-${idxCuenta}-${idxCargo}`} style={{ 
+                            background: idxCargo % 2 === 0 ? "#f8f9fa" : "#fff",
+                            borderLeft: cargo.tipo === "RECARGO" ? "3px solid #e53e3e" : "none"
+                          }}>
+                          {columnas.numero && <td style={s.td}>{rowNumber}</td>}
                           {columnas.cuenta && <td style={s.td}>{cuenta.cuenta}</td>}
                           {columnas.tutor && <td style={s.td}>{cuenta.tutor}</td>}
                           {columnas.cargoNo && <td style={s.td}>{cargo.cargoNo}</td>}
@@ -656,8 +677,9 @@ export default function CuentasPorCobrarPage() {
                           {columnas.estado && <td style={s.td}>{getEstadoBadge(cargo.estado)}</td>}
                           {columnas.actualizadoEn && <td style={s.td}>{new Date(cargo.actualizadoEn || "").toLocaleString()}</td>}
                         </tr>
-                      ))
-                    ))}
+                        );
+                      })
+                    )}
                   </tbody>
                   <tfoot>
                     <tr style={s.tfoot}>
@@ -922,7 +944,7 @@ const s: Record<string, React.CSSProperties> = {
   errorMsg: { background: "#fff5f5", border: "1px solid #fed7d7", color: "#c53030", borderRadius: "8px", padding: "12px 16px", marginBottom: "16px" },
   tabs: { display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" },
   tab: { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666" },
-  tabActivo: { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo: { border: "1px solid #2C1810", color: "#2C1810", background: "#EBF3FB" },
   filtrosCard: { background: "#fff", borderRadius: "12px", padding: "20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
   filtrosGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", alignItems: "center" },
   label: { fontSize: "12px", fontWeight: "600", color: "#333", display: "block", marginBottom: "4px" },
@@ -939,7 +961,7 @@ const s: Record<string, React.CSSProperties> = {
   tfoot: { background: "#f0f4f8", fontWeight: "bold" },
   badgeCorriente: { background: "#c6f6d5", color: "#276749", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },
   badgePendiente: { background: "#fefcbf", color: "#744210", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },
-  badgeVencido: { background: "#fed7d7", color: "#c53030", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },
+  badgeVencida: { background: "#fed7d7", color: "#c53030", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },
   badgeAbonada: { background: "#fed7d7", color: "#c53030", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },
   badgeSalda: { background: "#c6f6d5", color: "#276749", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },
   dropdownContainer: { position: "relative" as const, width: "100%" },

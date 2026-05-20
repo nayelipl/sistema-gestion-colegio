@@ -35,16 +35,6 @@ export default function AdministracionPage() {
       </div>
     );
   }
-
-  const reiniciarAnio = async () => {
-    if (!confirm("⚠️ ¿Estás seguro? Esto reiniciará el año escolar. Se respaldarán los datos actuales.")) return;
-    setError(""); setMensaje("");
-    const res  = await fetch("/api/administracion/reiniciar", { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error); return; }
-    setMensaje(data.mensaje);
-  };
-
   return (
     <main style={s.main}>
       <NavBar titulo="Administración" icono="⚙️" userName={session?.user?.name} />
@@ -77,24 +67,9 @@ export default function AdministracionPage() {
 
         <div style={s.seccionTitulo}>⚙️ Acciones del Sistema</div>
         <div style={s.accionesGrid}>
-
           <div style={s.accionCard}>
-            <div style={s.accionIcono}>🔄</div>
             <div>
-              <h3 style={s.accionTitulo}>Reinicio de Año Escolar</h3>
-              <p style={s.accionDesc}>
-                Cierra el año escolar actual. Incluye respaldo de base de datos,
-                corte de cuentas por cobrar y preparación para el nuevo ciclo lectivo.
-              </p>
-              <button onClick={reiniciarAnio} style={s.btnPeligro}>
-                🔄 Iniciar reinicio de año
-              </button>
-            </div>
-          </div>
-
-          <div style={s.accionCard}>
             <div style={s.accionIcono}>💰</div>
-            <div>
               <h3 style={s.accionTitulo}>Tarifas del Año Escolar</h3>
               <p style={s.accionDesc}>
                 Configura inscripción, colegiatura por grado y transporte para el año escolar.

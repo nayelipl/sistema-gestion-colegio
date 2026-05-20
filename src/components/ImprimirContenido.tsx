@@ -43,6 +43,24 @@ export const ImprimirContenido = React.forwardRef<HTMLDivElement, ImprimirConten
       firmas: { display: "flex", justifyContent: "space-between", marginTop: "50px" },
     };
 
+
+    const renderMatricula = () => {
+      return (
+        <>
+          <div style={estilos.seccion}>
+            <p><strong>Inscripción No.:</strong> {datos.inscripcionNo}</p>
+            <p><strong>Fecha:</strong> {datos.fechaFormateada || formatFechaLarga(datos.fecha)}</p>
+            <p><strong>Estudiante:</strong> {datos.estudianteNombre} {datos.estudianteApellido} ({datos.estudianteCodigo})</p>
+            <p><strong>Curso:</strong> {datos.cursoGrado}</p>
+            <p><strong>Sección:</strong> {datos.seccionNombre}</p>
+            <p><strong>Año Escolar:</strong> {datos.anioEscolar}</p>
+            <p><strong>Valor Cobrado:</strong> RD${(datos.valorCobrado || 0).toFixed(2)}</p>
+            {datos.observaciones && <p><strong>Observaciones:</strong> {datos.observaciones}</p>}
+          </div>
+        </>
+      );
+    };
+
     const formatMonto = (monto: number): string => `RD$${monto.toFixed(2)}`;
 
     const renderReciboCargos = () => {
@@ -289,6 +307,7 @@ export const ImprimirContenido = React.forwardRef<HTMLDivElement, ImprimirConten
           <h2 style={estilos.titulo}>{titulo}</h2>
           <p style={estilos.subtitulo}>Documento generado por el sistema de gestión escolar</p>
         </div>
+        {tipo === "matricula" && renderMatricula()}
         {tipo === "recibo-cargos" && renderReciboCargos()}
         {tipo === "recibo-otros" && renderReciboOtros()}
         {tipo === "reporte" && renderReporte()}
