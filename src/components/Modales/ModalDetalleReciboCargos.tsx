@@ -3,6 +3,7 @@
 // y opciones para imprimir o cerrar el modal.
 "use client";
 import React from "react";
+import { formatFechaLarga, formatHoraLocal } from "@/lib/formatear-fecha";
 
 interface ModalDetalleReciboProps {
   isOpen: boolean;
@@ -81,7 +82,7 @@ export function ModalDetalleReciboCargos({ isOpen, onClose, onPrint, recibo }: M
 
           <div style={modalStyles.detalleGrid}>
             <div><strong>Recibo No.:</strong> <span style={estaAnulado ? modalStyles.tachado : {}}>{recibo.reciboNo}</span></div>
-            <div><strong>Fecha:</strong> {new Date(recibo.fecha).toLocaleString("es-DO")}</div>
+            <div><strong>Fecha:</strong> {formatFechaLarga(recibo.fecha)} {recibo.hora}</div>
             <div><strong>Tutor:</strong> {recibo.tutor.nombre} {recibo.tutor.apellido}</div>
             <div><strong>Cuenta:</strong> {recibo.tutor.cuentaNo}</div>
             <div><strong>Método de Pago:</strong> {recibo.metodoPago}</div>

@@ -48,6 +48,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: { id },
       data:  { activo },
     });
+    
+    // Revocar credenciales y actualizar usuario asociado
+    await prisma.usuario.updateMany({
+      where: { email: empleado.email },
+      data: { activo },
+    });
+
     return NextResponse.json({ mensaje: `Empleado ${activo ? "habilitado" : "inhabilitado"}.`, empleado });
   } catch (error) {
     return NextResponse.json({ error: "Error al cambiar estado." }, { status: 500 });

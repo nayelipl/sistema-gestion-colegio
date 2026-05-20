@@ -112,26 +112,12 @@ const MODULOS = [
     roles: ["ADMINISTRADOR"],
   },
   {
-  nombre: "Cobro de Otros Ingresos",
-  icono: "💰",
-  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
-  href: "/dashboard/financiero/cobro-otros-ingresos",
-  roles: ["ADMINISTRADOR"],
-  },
-/*  {
-    nombre: "Reporte de Ingresos",
-    icono: "📊",
-    desc: "Cuadre de Caja Grande y reportes de ingresos.",
-    href: "/dashboard/financiero/reporte-ingresos",
-    roles: ["ADMINISTRADOR"],
-  },*/
-  /*{
-    nombre: "Caja Chica",
+    nombre: "Cobro de Otros Ingresos",
     icono: "💰",
-    desc: "Gestión de desembolsos y cuadre de caja chica.",
-    href: "/dashboard/financiero/caja-chica",
+    desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+    href: "/dashboard/financiero/cobro-otros-ingresos",
     roles: ["ADMINISTRADOR"],
-  },*/
+  },
   {
     nombre: "Comunicaciones",
     icono:  "📢",
@@ -142,7 +128,7 @@ const MODULOS = [
   {
     nombre: "Administración del Sistema",
     icono:  "⚙️",
-    desc:   "Configuración, reinicio de año escolar y respaldos.",
+    desc:   "Configuración del año escolar y gestión de roles y permisos.",
     href:   "/dashboard/administracion",
     roles:  ["ADMINISTRADOR"],
   },
@@ -173,25 +159,25 @@ const MODULOS = [
     roles:  ["CONTADOR"],
   },
   {
-  nombre: "Estado de Cuenta",
-  icono: "📄",
-  desc: "Ver movimientos y balance de cuentas de tutores",
-  href: "/dashboard/financiero/estado-cuenta",
-  roles: ["CONTADOR"],
+    nombre: "Estado de Cuenta",
+    icono: "📄",
+    desc: "Ver movimientos y balance de cuentas de tutores",
+    href: "/dashboard/financiero/estado-cuenta",
+    roles: ["CONTADOR"],
   },
   {
-  nombre: "Cobro de Cargos a Tutores",
-  icono: "💰",
-  desc: "Registro de pagos presenciales de colegiatura y transporte",
-  href: "/dashboard/financiero/cobro-cargos",
-  roles: ["CONTADOR"],
+    nombre: "Cobro de Cargos a Tutores",
+    icono: "💰",
+    desc: "Registro de pagos presenciales de colegiatura y transporte",
+    href: "/dashboard/financiero/cobro-cargos",
+    roles: ["CONTADOR"],
   },
   {
-  nombre: "Cobro de Otros Ingresos",
-  icono: "💰",
-  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
-  href: "/dashboard/financiero/cobro-otros-ingresos",
-  roles: ["CONTADOR"],
+    nombre: "Cobro de Otros Ingresos",
+    icono: "💰",
+    desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+    href: "/dashboard/financiero/cobro-otros-ingresos",
+    roles: ["CONTADOR"],
   },
   {
     nombre: "Cuentas por Cobrar",
@@ -199,21 +185,7 @@ const MODULOS = [
     desc: "Control de deudores y cargos pendientes",
     href: "/dashboard/financiero/cuentas-por-cobrar",
     roles: ["CONTADOR"],
-  },/*
-  {
-    nombre: "Reporte de Ingresos",
-    icono: "📊",
-    desc: "Cuadre de Caja Grande y reportes de ingresos.",
-    href: "/dashboard/financiero/reporte-ingresos",
-    roles: ["CONTADOR"],
-  },*/
- /* {
-    nombre: "Caja Chica",
-    icono: "💰",
-    desc: "Gestión de desembolsos y cuadre de caja chica.",
-    href: "/dashboard/financiero/caja-chica",
-    roles: ["CONTADOR"],
-  },*/
+  },
   
   // ── CAJERO ─────────────────────────────────────────────
   {
@@ -238,33 +210,26 @@ const MODULOS = [
     roles:  ["CAJERO"],
   },
   {
-  nombre: "Estado de Cuenta",
-  icono: "📄",
-  desc: "Ver movimientos y balance de cuentas de tutores",
-  href: "/dashboard/financiero/estado-cuenta",
-  roles: ["CAJERO"],
-  },
-  {
-  nombre: "Cobro de Cargos a Tutores",
-  icono: "💰",
-  desc: "Registro de pagos presenciales de colegiatura y transporte",
-  href: "/dashboard/financiero/cobro-cargos",
-  roles: ["CAJERO"],
-  },
-  {
-  nombre: "Cobro de Otros Ingresos",
-  icono: "💰",
-  desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
-  href: "/dashboard/financiero/cobro-otros-ingresos",
-  roles: ["CAJERO"],
-  },/*
-  {
-    nombre: "Caja Chica",
-    icono: "💰",
-    desc: "Gestión de desembolsos y cuadre de caja chica.",
-    href: "/dashboard/financiero/caja-chica",
+    nombre: "Estado de Cuenta",
+    icono: "📄",
+    desc: "Ver movimientos y balance de cuentas de tutores",
+    href: "/dashboard/financiero/estado-cuenta",
     roles: ["CAJERO"],
-  },*/
+  },
+  {
+    nombre: "Cobro de Cargos a Tutores",
+    icono: "💰",
+    desc: "Registro de pagos presenciales de colegiatura y transporte",
+    href: "/dashboard/financiero/cobro-cargos",
+    roles: ["CAJERO"],
+  },
+  {
+    nombre: "Cobro de Otros Ingresos",
+    icono: "💰",
+    desc: "Registro de pagos por otros conceptos como excursiones o derecho a graduación",
+    href: "/dashboard/financiero/cobro-otros-ingresos",
+    roles: ["CAJERO"],
+  },
 
   // ── DIRECCIÓN ACADÉMICA ────────────────────────────────
   {
@@ -321,6 +286,13 @@ const MODULOS = [
 
   // ── SECRETARÍA DOCENTE ─────────────────────────────────
   
+  {
+    nombre: "Gestión de Estudiantes",
+    icono:  "👥",
+    desc:   "Administración de estudiantes.",
+    href:   "/dashboard/usuarios",
+    roles:  ["SECRETARIA_DOCENTE"],
+  },
   {
     nombre: "Matrícula",
     icono:  "🎓",
@@ -412,18 +384,18 @@ const MODULOS = [
     roles:  ["MAESTRO"],
   },
   {
-  nombre: "Estado de Cuenta",
-  icono: "📄",
-  desc: "Ver mis movimientos y balance de cuenta",
-  href: "/dashboard/financiero/estado-cuenta",
-  roles: ["TUTOR"],
+    nombre: "Estado de Cuenta",
+    icono: "📄",
+    desc: "Ver mis movimientos y balance de cuenta",
+    href: "/dashboard/financiero/estado-cuenta",
+    roles: ["TUTOR"],
   },
   {
-  nombre: "Pago en línea",
-  icono: "💰",
-  desc: "Realizar pagos en línea de colegiatura, transporte y otros conceptos.",
-  href: "/dashboard/tutor/pago-en-linea",
-  roles: ["TUTOR"],
+    nombre: "Pago en línea",
+    icono: "💰",
+    desc: "Realizar pagos en línea de colegiatura, transporte y otros conceptos.",
+    href: "/dashboard/tutor/pago-en-linea",
+    roles: ["TUTOR"],
   },
   {
     nombre: "Mis Representados",
@@ -577,14 +549,14 @@ export default function DashboardPage() {
 
 const styles: Record<string, React.CSSProperties> = {
   loading:      { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" },
-  main:         { minHeight: "100vh", background: "#f0f4f8", fontFamily: "Arial, sans-serif" },
+  main:         { minHeight: "100vh", background: "#f0f4f8", fontFamily: "Arial, sans-serif", width: "100%", overflowX: "hidden" },
   nav:          { background: "linear-gradient(135deg, #2C1810, #4a2518)", color: "#fff", padding: "14px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" },
   navTitleLink: { textDecoration: "none", flex: 1, textAlign: "left" as const },
   navTitle:     { fontWeight: "bold", fontSize: "16px", color: "#fff", cursor: "pointer" },
   navRight:     { display: "flex", alignItems: "center", gap: "16px" },
   navUser:      { fontSize: "14px" },
   btnLogout:    { background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", borderRadius: "6px", padding: "6px 14px", fontSize: "13px", cursor: "pointer" },
-  contenido:    { maxWidth: "1000px", margin: "0 auto", padding: "32px 20px" },
+  contenido:    { width: "90%", maxWidth: "1400px", margin: "0 auto", padding: "32px 20px" },
   bienvenida:   { background: "#fff", borderRadius: "12px", padding: "28px", marginBottom: "28px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
   saludo:       { fontSize: "22px", color: "#2C1810", margin: "0 0 10px" },
   badge:        { display: "inline-block", background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", borderRadius: "20px", padding: "4px 16px", fontSize: "13px", fontWeight: "bold", marginBottom: "12px" },

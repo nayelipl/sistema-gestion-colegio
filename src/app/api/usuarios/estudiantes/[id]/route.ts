@@ -22,28 +22,64 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const body = await req.json();
-    const { seccionId, nombre, apellido, ...resto } = body;
+    const { seccionId, tutorId, nombre, apellido, fechaNac, id: bodyId, codigo, creadoEn, actualizadoEn, ...resto } = body;
     const estudianteId = parseInt(id);
     
     if (isNaN(estudianteId)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
-    // Obtener sección anterior (solo para validación)
-    const estudianteActual = await prisma.estudiante.findUnique({
-      where: { id: estudianteId },
-      select: { seccionId: true }
-    });
-
-    // Solo actualizar datos básicos
+    const updateData: any = {};
+    
+    // Campos escalares
+    if (nombre !== undefined) updateData.nombre = nombre;
+    if (apellido !== undefined) updateData.apellido = apellido;
+    if (fechaNac !== undefined) updateData.fechaNac = new Date(fechaNac);
+    
+    // Campos escalares adicionales
+    const camposPermitidos = [
+      "nombre", "apellido", "fechaNac", "RNE", "lugarNac", "sexo", "direccion",
+      "parentesco", "guardianLegal", "viveCon", "folio", "libro", "numeroActa", "anioActa",
+      "padreNombre", "padreApellido", "padreTipoDocIdentidad", "padreNumeroDocIdentidad",
+      "padreOcupacion", "padreCelular", "padreTelefonoResidencial", "padreTelefonoTrabajo",
+      "padreDireccion", "padreEmail", "madreNombre", "madreApellido", "madreTipoDocIdentidad",
+      "madreNumeroDocIdentidad", "madreOcupacion", "madreCelular", "madreTelefonoResidencial",
+      "madreTelefonoTrabajo", "madreDireccion", "madreEmail"
+    ];
+    
+    // Campos escalares
+    for (const campo of camposPermitidos) {
+      if (body[campo] !== undefined) {
+        if (campo === "fechaNac") {
+          updateData[campo] = new Date(body[campo]);
+        } else {
+          updateData[campo] = body[campo];
+        }
+      }
+    }
+    
+    // Relación con tutor
+    if (body.tutorId !== undefined) {
+      if (body.tutorId === null || body.tutorId === "") {
+        updateData.tutor = { disconnect: true };
+      } else {
+        updateData.tutor = { connect: { id: parseInt(body.tutorId) } };
+      }
+    }
+    
+    // Relación con sección
+    if (body.seccionId !== undefined) {
+      if (body.seccionId === null || body.seccionId === "") {
+        updateData.seccion = { disconnect: true };
+      } else {
+        updateData.seccion = { connect: { id: parseInt(body.seccionId) } };
+      }
+    }
+    
     const estudiante = await prisma.estudiante.update({
       where: { id: estudianteId },
-      data: { 
-        seccionId: seccionId ? parseInt(seccionId) : undefined, 
-        nombre, 
-        apellido, 
-        ...resto 
-      }
+      data: updateData,
+      include: { tutor: true, seccion: { include: { curso: true } } }
     });
 
     return NextResponse.json({ estudiante });
@@ -70,8 +106,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     
     const updateData: any = {};
-    if (data.seccionId !== undefined) updateData.seccionId = parseInt(data.seccionId);
-    if (data.tutorId !== undefined) updateData.tutorId = parseInt(data.tutorId);
+    if (data.seccionId !== undefined) {
+      if (data.seccionId === null || data.seccionId === "") {
+        updateData.seccion = { disconnect: true };
+      } else {
+        updateData.seccion = { connect: { id: parseInt(data.seccionId) } };
+      }
+    }
+    if (data.tutorId !== undefined) updateData.tutor = { connect: { id: parseInt(data.tutorId) } };
     if (data.nombre !== undefined) updateData.nombre = data.nombre;
     if (data.apellido !== undefined) updateData.apellido = data.apellido;
     
@@ -184,7 +226,7 @@ export async function DELETE(
       });
     }
 
-    // Marcar matrícula actual como inactiva
+    // Marcar matrícula actual como inactiva: no matriculado
     await prisma.matricula.updateMany({
       where: {
         estudianteId: id,
@@ -193,7 +235,7 @@ export async function DELETE(
       data: {
         activa: false,
         fechaBaja: fechaBaja,
-        motivoBaja: "BAJA_VOLUNTARIA"
+        motivoBaja: "BAJA VOLUNTARIA"
       }
     });
 

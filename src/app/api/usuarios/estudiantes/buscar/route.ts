@@ -19,34 +19,42 @@ export async function GET(req: NextRequest) {
       return NextResponse.json([]);
     }
 
+    // Para buscar no matriculados: no filtrar por activo, solo por matrícula
     let whereCondition: any = {
       OR: [
         { codigo: { contains: q } },
         { nombre: { contains: q } },
         { apellido: { contains: q } },
       ],
-      // Para decidir si filtrar por activo
-      ...(incluirInactivos ? {} : { activo: true })
     };
 
-    // Filtrar según el tipo y sumas a la condición anterior
+    // Solo filtrar por activo si se especifica, para revocar credenciales
+    if (!incluirInactivos && tipo !== "no_matriculados") {
+      whereCondition.activo = true;
+    }
+
+    // Filtro para NO_MATRICULADOS: estudiantes que no tienen matrícula activa
+    // No filtrar por activo, porque pueden estar activos pero sin matrícula
     if (tipo === "no_matriculados") {
       whereCondition = {
         ...whereCondition,
         NOT: {
           matriculas: {
             some: {
-              anioEscolar: anioEscolar
+              anioEscolar: anioEscolar,
+              activa: true
             }
           }
         }
       };
-    } else if (tipo === "matriculados") {
+    } // Filtro para MATRICULADOS: estudiantes que sí tienen matrícula activa
+    else if (tipo === "matriculados") {
       whereCondition = {
         ...whereCondition,
         matriculas: {
           some: {
-            anioEscolar: anioEscolar
+            anioEscolar: anioEscolar,
+            activa: true
           }
         }
       };

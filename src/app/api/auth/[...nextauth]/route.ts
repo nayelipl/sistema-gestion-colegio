@@ -18,6 +18,10 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
 
+        if (!usuario || usuario.activo === false) {
+          return null; // Usuario inactivo no puede iniciar sesión
+        }
+
         if (usuario && usuario.activo) {
           const contrasenaValida = await bcrypt.compare(
             credentials.contrasena,

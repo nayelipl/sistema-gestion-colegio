@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verificarPermiso } from "@/lib/auth-helper";
 import bcrypt from "bcryptjs";
 
-const ROLES_VER      = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA","SECRETARIA_DOCENTE","MAESTRO","CAJERO","ORIENTADOR_ESCOLAR"];
+const ROLES_VER      = ["ADMINISTRADOR","DIRECCION_ACADEMICA","COORDINACION_ACADEMICA","SECRETARIA_DOCENTE","MAESTRO","CAJERO","ORIENTADOR_ESCOLAR", "DIRECTOR_ADMINISTRATIVO"];
 const ROLES_ESCRIBIR = ["ADMINISTRADOR"];
 
 export async function GET() {

@@ -17,6 +17,8 @@ type Estudiante = {
   fechaNac?: string;
   edad?: number;
   activo?: boolean;
+  fechaBaja?: string;
+  motivoBaja?: string;
   tutor?: { id: number; nombre: string; apellido: string; cuentaNo: string };
   seccion?: { id: number; aula: string; codigo: string; curso: { grado: string } };
 };
@@ -125,14 +127,16 @@ export default function MatriculaPage() {
   const cargarEstudiantes = async (inputValue: string) => {
     if (!inputValue || inputValue.length < 2) return [];
     try {
-      const res = await fetch(`/api/usuarios/estudiantes/buscar?q=${encodeURIComponent(inputValue)}&incluirInactivos=true`);
+      // Solo estudiantes sin matrícula activa
+      const res = await fetch(`/api/usuarios/estudiantes/buscar?q=${encodeURIComponent(inputValue)}&tipo=no_matriculados`);
       const data = await res.json();
+      console.log("Estudiantes recibidos:", data); // raw
       return data.map((estudiante: any) => ({
         value: estudiante.id,
         label: estudiante.label || `${estudiante.codigo} - ${estudiante.nombre} ${estudiante.apellido}`,
         estudiante: estudiante.estudiante || estudiante,
-        sublabel: `${estudiante.estudiante?.activo !== false ? "✅ Activo" : "❌ Inactivo"}`
-      }));
+        sublabel: estudiante.estudiante?.activo !== false ? "✅ Activo" : "⚠️ Dado de baja - Se reactivará al matricular"
+    }));
     } catch (error) {
       console.error("Error cargando estudiantes:", error);
       return [];
@@ -260,30 +264,6 @@ export default function MatriculaPage() {
     }
   };
 
-  const darDeBaja = async (id: number, nombre: string, apellido: string) => {
-    if (!confirm(`¿Dar de baja a ${nombre} ${apellido}?\n\nEsta acción:\n• Cancelará todos los cargos futuros\n• El balance del tutor se ajustará a cero\n• El estudiante no podrá matricularse hasta ser reactivado\n\n¿Estás seguro?`)) return;
-
-    setCargando(true);
-    setError("");
-
-    try {
-      const res = await fetch(`/api/usuarios/estudiantes/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al dar de baja");
-      
-      setExito(data.mensaje || `✅ ${nombre} ${apellido} ha sido dado de baja correctamente`);
-      await cargarMatriculaciones();
-      if (estudianteSeleccionado?.id === id) limpiarFormulario();
-      setTimeout(() => setExito(""), 4000);
-    } catch (error: any) {
-      console.error("Error al dar de baja:", error);
-      setError(error.message || "Error al dar de baja al estudiante");
-      setTimeout(() => setError(""), 4000);
-    } finally {
-      setCargando(false);
-    }
-  };
-
   if (status === "loading") return <div style={s.loading}>Cargando...</div>;
   if (!ROLES_PERMITIDOS.includes(rol)) return null;
 
@@ -318,8 +298,17 @@ export default function MatriculaPage() {
               <span style={s.navInfo}>Registro {indiceActual + 1}/{matriculaciones.length}</span>
               <button onClick={() => navegar("siguiente")} style={s.btnNav} disabled={matriculaciones.length === 0 || indiceActual >= matriculaciones.length - 1}>▶</button>
               <button onClick={() => navegar("ultimo")} style={s.btnNav} disabled={matriculaciones.length === 0}>⏭</button>
+              {(modoEdicion === "ver" || matriculaActual !== null) && (
+                <button onClick={limpiarFormulario} style={s.btnNuevo}>+ Nuevo</button>
+              )}
             </div>
           </div>
+
+          {matriculaActual?.estudiante?.activo === false && (
+            <div style={{ background: "#fff5f5", padding: "8px", borderRadius: "8px", marginBottom: "16px", color: "#c53030" }}>
+              ⚠️ Este estudiante fue dado de baja el {matriculaActual.estudiante.fechaBaja ? formatFechaLarga(matriculaActual.estudiante.fechaBaja) : "—"} - Motivo: {matriculaActual.estudiante.motivoBaja || "No especificado"}
+            </div>
+          )}
 
           <div style={s.seccion}>
             <h3 style={s.seccionTitulo}>📋 Datos del Estudiante</h3>
@@ -415,14 +404,18 @@ export default function MatriculaPage() {
           </div>
 
           <div style={s.buttonGroup}>
-            {modoEdicion === "editando" && (
+            {(modoEdicion === "nuevo" || modoEdicion === "editando") && (
               <button onClick={cancelarEdicion} style={s.btnSecundario}>Cancelar</button>
             )}
             {modoEdicion === "ver" && (
               <button onClick={editarMatricula} style={s.btnEditar}>✏️ Editar</button>
             )}
-            <button onClick={() => { setMostrarListado(true) }} style={s.btnSecundario}>Ver Listado</button>
-            {!modoEdicion && (
+            {modoEdicion === "ver" && (
+              <button onClick={() => { setMostrarListado(true); cargarMatriculaciones(); }} style={s.btnSecundario}>
+                Ver Listado
+              </button>
+            )}
+            {modoEdicion === "ver" && matriculaActual && (
               <button onClick={handleImprimir} style={s.btnImprimir}>🖨️ Imprimir</button>
             )}
             {(modoEdicion === "nuevo" || modoEdicion === "editando") && (
@@ -464,9 +457,6 @@ export default function MatriculaPage() {
                           <td style={s.td}><span style={mat.estudiante?.activo !== false ? s.badgeActivo : s.badgeInactivo}>{mat.estudiante?.activo !== false ? "Activo" : "Inactivo"}</span></td>
                           <td style={s.td}>
                             <button onClick={() => verMatricula(mat)} style={s.btnVer} title="Ver matrícula">👁️ Ver</button>
-                            {mat.estudiante?.activo !== false && (
-                              <button onClick={() => darDeBaja(mat.estudianteId, mat.estudiante?.nombre, mat.estudiante?.apellido)} style={s.btnBaja} title="Dar de baja al estudiante">🚫 Baja</button>
-                            )}
                           </td>
                         </tr>
                       ))}
@@ -493,7 +483,20 @@ export default function MatriculaPage() {
       )}
 
       <div style={{ display: "none" }}>
-        <ImprimirContenido ref={componentRef} titulo="Comprobante de Matrícula" datos={modoEdicion === "editando" && matriculaActual ? { ...matriculaActual, estudianteNombre: matriculaActual.estudiante?.nombre, estudianteApellido: matriculaActual.estudiante?.apellido, estudianteCodigo: matriculaActual.estudiante?.codigo, seccionNombre: matriculaActual.seccion?.aula, cursoGrado: matriculaActual.seccion?.curso?.grado, fechaFormateada: formatFechaLarga(matriculaActual.fecha) } : null} tipo="matricula" />
+        <ImprimirContenido 
+          ref={componentRef} 
+          titulo="Comprobante de Matrícula" 
+          datos={(modoEdicion === "editando" || modoEdicion === "ver") && matriculaActual ? { 
+            ...matriculaActual, 
+            estudianteNombre: matriculaActual.estudiante?.nombre, 
+            estudianteApellido: matriculaActual.estudiante?.apellido, 
+            estudianteCodigo: matriculaActual.estudiante?.codigo, 
+            seccionNombre: matriculaActual.seccion?.aula, 
+            cursoGrado: matriculaActual.seccion?.curso?.grado, 
+            fechaFormateada: formatFechaLarga(matriculaActual.fecha) 
+          } : null} 
+          tipo="matricula" 
+        />
       </div>
     </main>
   );

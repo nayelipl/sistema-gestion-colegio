@@ -2,10 +2,9 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import AsyncSelect from "react-select/async";
 import NavBar from "@/components/NavBar";
-import { formatFechaLocal } from "@/lib/formatear-fecha";
+import { formatFechaLarga } from "@/lib/formatear-fecha";
 
 type Movimiento = {
   id: number;
@@ -128,10 +127,6 @@ export default function EstadoCuentaPage() {
     }
   };
 
-  const formatFecha = (fechaStr: string) => {
-    return new Date(fechaStr).toLocaleDateString("es-DO");
-  };
-
   const limpiarFiltros = () => {
     setFechaDesde("");
     setFechaHasta("");
@@ -205,7 +200,7 @@ export default function EstadoCuentaPage() {
                   }
                   loadingMessage={() => "Buscando tutores..."}
                   styles={{
-                    control: (base) => ({ ...base, padding: "4px", borderRadius: "7px", borderColor: "#ddd", minHeight: "42px", width: "100%", boxSizing: "border-box" as const, backgroundColor: "#fff", cursor: "text" }),
+                    control: (base) => ({ ...base, padding: "4px", borderRadius: "7px", border: "1px solid #ddd", minHeight: "42px", width: "100%", boxSizing: "border-box" as const, backgroundColor: "#fff", cursor: "text" }),
                     menu: (base) => ({ ...base, zIndex: 9999, width: "100%", minWidth: "250px" }),
                     container: (base) => ({ ...base, width: "100%", minWidth: "250px" }),
                     input: (base) => ({ ...base, width: "100%" }),
@@ -287,7 +282,7 @@ export default function EstadoCuentaPage() {
                 <tbody>
                   {movimientos.map((mov, i) => (
                     <tr key={mov.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f9fa" }}>
-                      <td style={s.td}>{formatFecha(mov.fecha)}</td>
+                      <td style={s.td}>{formatFechaLarga(mov.fecha)}</td>
                       <td style={s.td}><code style={s.codigo}>{mov.docNo}</code></td>
                       <td style={s.td}>
                         {getTipoBadge(mov.tipo)} {mov.descripcion}
@@ -301,7 +296,7 @@ export default function EstadoCuentaPage() {
                       <td style={s.td}>{mov.credito > 0 ? formatMonto(mov.credito) : "—"}</td>
                       <td style={s.td}><strong>{formatMonto(mov.balance)}</strong></td>
                       <td style={s.td}>{mov.realizadoPor}</td>
-                      <td style={s.td}>{formatFechaLocal(mov.fecha)}</td>
+                      <td style={s.td}>{mov.hora || "—"}</td>
                     </tr>
                   ))}
                 </tbody>

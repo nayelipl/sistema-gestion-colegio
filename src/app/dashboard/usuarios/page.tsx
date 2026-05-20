@@ -10,13 +10,13 @@ type Empleado = {
   email: string; telefono?: string; salario?: number; activo: boolean;
 };
 type Tutor = {
-  id: number; codigo: string; nombre: string; apellido: string; cedula: string;
-  email: string; telefono?: string; direccion?: string; activo: boolean;
+  id: number; cuentaNo: number; nombre: string; apellido: string; docIdentidad: string;
+  email: string; celular?: string; direccion?: string; activo: boolean;
   estudiantes?: { id: number; nombre: string; apellido: string }[];
 };
 type Estudiante = {
-  id: number; codigo: string; nombre: string; apellido: string; RNE?: string;
-  fechaNac?: string; activo: boolean;
+  id: number; codigo: string; nombre: string; apellido: string; sexo: string; RNE?: string;
+  fechaNac?: string; lugarNac: string; parentesco: string; parentescoEspecfificar: string; activo: boolean;
   tutor?: { id: number; nombre: string; apellido: string; codigo: string } | null;
 };
 type Tab = "empleados" | "tutores" | "estudiantes";
@@ -84,11 +84,33 @@ export default function UsuariosPage() {
     );
 
   const abrirNuevo = () => {
+  if (tab === "empleados") {
     setForm({
       nombre: "", apellido: "", cedula: "", email: "",
-      telefono: "", ocupacion: "", nombreContactoAlterno: "",
-      telefonoContactoAlterno: "", contrasena: ""
+      telefono: "", salario: "", rol: "", contrasena: ""
     });
+  } else if (tab === "tutores") {
+    setForm({
+      nombre: "", apellido: "", email: "", contrasena: "",
+      tipoDocIdentidad: "CEDULA", numeroDocIdentidad: "",
+      celular: "", direccion: "", ocupacion: "",
+      nombreContactoAlterno: "", telefonoContactoAlterno: ""
+    });
+  } else if (tab === "estudiantes") {
+    setForm({
+      nombre: "",
+      apellido: "",
+      RNE: "",
+      fechaNac: "",
+      lugarNac: "",
+      sexo: "",
+      tutorId: "",
+      parentesco: "",
+      parentescoEspecificar: "",
+      email: "",
+      contrasena: ""
+    });
+  }
     setSeleccionado(null);
     setModal("nuevo");
     setError(""); setContrasenaTemp("");
@@ -96,7 +118,7 @@ export default function UsuariosPage() {
 
   const abrirEditar = (u: any) => {
     setSeleccionado(u);
-    setForm({ ...u });
+    setForm({ ...u, contraseña: "" });
     setModal("editar");
     setError(""); setContrasenaTemp("");
   };
@@ -137,16 +159,25 @@ export default function UsuariosPage() {
   const darDeBaja = async (est: Estudiante) => {
     if (!confirm(
       `¿Dar de baja al estudiante ${est.nombre} ${est.apellido}?\n\n` +
-      `Su estado cambiará a INACTIVO y no podrá acceder al sistema.\n` +
-      `Esta acción puede revertirse habilitando el usuario nuevamente.`
+      `Esta acción:\n` +
+      `• Cancelará todos los cargos futuros\n` +
+      `• Ajustará el balance del tutor a cero\n` +
+      `• El estudiante no podrá matricularse hasta ser reactivado\n` +
+      `• Las credenciales de acceso serán revocadas\n\n` +
+      `¿Estás seguro?`
     )) return;
 
-    const res  = await fetch(`/api/usuarios/estudiantes/${est.id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) { alert(data.error); return; }
-    setMensaje(data.mensaje);
-    cargarDatos();
-    setTimeout(() => setMensaje(""), 4000);
+    try {
+      const res = await fetch(`/api/usuarios/estudiantes/${est.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error); return; }
+      setMensaje(data.mensaje);
+      cargarDatos();
+      setTimeout(() => setMensaje(""), 4000);
+    } catch (error: any) {
+      setError(error.message);
+      setTimeout(() => setError(""), 4000);
+    }
   };
 
   if (status === "loading") return <div style={s.loading}>Cargando...</div>;
@@ -266,11 +297,11 @@ export default function UsuariosPage() {
                       </td>
                     </>}
                     {tab === "tutores" && <>
-                      <td style={s.td}><code style={s.codigo}>{u.codigo}</code></td>
+                      <td style={s.td}>{u.cuentaNo}</td>
                       <td style={s.td}>{u.nombre} {u.apellido}</td>
-                      <td style={s.td}>{u.cedula || "—"}</td>
+                      <td style={s.td}>{u.documentoIdentidad || "—"}</td>
                       <td style={s.td}>{u.email}</td>
-                      <td style={s.td}>{u.telefono || "—"}</td>
+                      <td style={s.td}>{u.celular || "—"}</td>
                       <td style={s.td}>{u.estudiantes?.length ?? 0} representado(s)</td>
                       <td style={s.td}><span style={u.activo ? s.activo : s.inactivo}>{u.activo ? "Activo" : "Inactivo"}</span></td>
                       <td style={s.td}>
@@ -385,13 +416,12 @@ function FormEmpleado({ form, setForm, esNuevo }: any) {
           ))}
         </select>
       </div>
-      {esNuevo && (
+      {/* Permitir cambiar la contraseña siempre */}
         <div style={{ gridColumn: "1 / -1" }}>
           <div style={s.infoBox}>
             ℹ️ La contraseña temporal se generará automáticamente y se mostrará al registrar.
           </div>
         </div>
-      )}
     </div>
   );
 }
@@ -402,16 +432,23 @@ function FormTutor({ form, setForm, esNuevo }: any) {
     <div style={s.formGrid}>
       <Campo label="Nombre *"       name="nombre"    value={form.nombre}    onChange={c} required />
       <Campo label="Apellido *"     name="apellido"  value={form.apellido}  onChange={c} required />
-      <Campo label="Cédula *"       name="cedula"    value={form.cedula}    onChange={c} required />
-      <Campo label="Teléfono"       name="telefono"  value={form.telefono}  onChange={c} />
+      <div>
+        <label style={s.label}>Tipo de documento *</label>
+        <select name="tipoDocIdentidad" value={form.tipoDocIdentidad || "CEDULA"} onChange={c} style={s.input}>
+          <option value="CEDULA">Cédula</option>
+          <option value="PASAPORTE">Pasaporte</option>
+        </select>
+      </div>
+      <Campo label="Número de documento *" name="numeroDocIdentidad" value={form.numeroDocIdentidad} onChange={c} required />
+      <Campo label="Teléfono"       name="celular"  value={form.celular}   onChange={c} />
       <Campo label="Dirección"      name="direccion" value={form.direccion} onChange={c} />
       <Campo label="Email *"        name="email"     value={form.email}     onChange={c} type="email" required />
       <Campo label="Ocupación"      name="ocupacion" value={form.ocupacion} onChange={c} />
       <Campo label="Nombre contacto alterno *" name="nombreContactoAlterno" value={form.nombreContactoAlterno} onChange={c} required />
       <Campo label="Teléfono contacto alterno" name="telefonoContactoAlterno" value={form.telefonoContactoAlterno} onChange={c} />
-      {esNuevo && (
-        <Campo label="Contraseña *" name="contrasena" value={form.contrasena} onChange={c} type="password" required />
-      )}
+      <Campo label={esNuevo ? "Contraseña *" : "Nueva contraseña (dejar en blanco para no cambiar)"} 
+        name="contrasena" value={form.contrasena || ""} onChange={c} type="password" required={esNuevo} 
+      />
     </div>
   );
 }
@@ -423,22 +460,45 @@ function FormEstudiante({ form, setForm, tutores, esNuevo }: any) {
       <Campo label="Nombre *"            name="nombre"   value={form.nombre}   onChange={c} required />
       <Campo label="Apellido *"          name="apellido" value={form.apellido} onChange={c} required />
       <Campo label="RNE"                 name="RNE"      value={form.RNE}      onChange={c} />
-      <Campo label="Fecha de nacimiento" name="fechaNac" value={form.fechaNac} onChange={c} type="date" required />
+      <Campo label="Fecha de nacimiento *" name="fechaNac" value={form.fechaNac} onChange={c} type="date" required />
+      <Campo label="Lugar de nacimiento *" name="lugarNac" value={form.lugarNac} onChange={c} type="string" required />
       <div>
-        <label style={s.label}>Tutor / Representante</label>
-        <select name="tutorId" value={form.tutorId || ""} onChange={c} style={s.input}>
-          <option value="">Sin tutor asignado</option>
-          {tutores.map((t: Tutor) => (
-            <option key={t.id} value={t.id}>{t.nombre} {t.apellido} — Cód. {t.codigo}</option>
-          ))}
+        <label style={s.label}>Sexo *</label>
+        <select name="sexo" value={form.sexo || ""} onChange={c} style={s.input}>
+          <option value="" disabled>-- Seleccione  --</option>
+          <option value="FEMENINO">Femenino</option>
+          <option value="MASCULINO">Masculino</option>
         </select>
       </div>
-      {esNuevo && (
-        <>
-          <Campo label="Email *"      name="email"      value={form.email}      onChange={c} type="email" required />
-          <Campo label="Contraseña *" name="contrasena" value={form.contrasena} onChange={c} type="password" required />
-        </>
+      <div>
+        <label style={s.label}>Tutor / Representante *</label>
+        <select name="tutorId" value={form.tutorId || ""} onChange={c} style={s.input}>
+          <option value="">-- Seleccione --</option>
+          {tutores.map((t: Tutor) => (
+            <option key={t.id} value={t.id}>{t.nombre} {t.apellido} — Cód. {t.cuentaNo}</option>
+          ))}
+        </select>
+        </div>
+      <div>
+        <label style={s.label}>Parentesco Tutor *</label>
+        <select name="parentesco" value={form.parentesco || ""} onChange={c} style={s.input}>
+          <option value="" disabled>-- Seleccione --</option>
+          <option value="PADRE">Padre</option>
+          <option value="MADRE">Madre</option>
+          <option value="ABUELO">Abuelo</option>
+          <option value="ABUELA">Abuela</option>
+            <option value="TÍO">Tío</option>
+          <option value="TÍA">Tía</option>
+          <option value="OTRO">Otro</option>
+        </select>
+      </div>
+      {form.parentesco === "OTRO" && (
+        <Campo label="Especificar parentesco" name="parentescoEspecificar" value={form.parentescoEspecificar} onChange={c} />
       )}
+          <Campo label="Email *"      name="email"      value={form.email}      onChange={c} type="email" required />
+          <Campo label={esNuevo ? "Contraseña *" : "Nueva contraseña (dejar en blanco para no cambiar)"}
+            name="contrasena" value={form.contrasena} onChange={c} type="password" required 
+          />
     </div>
   );
 }

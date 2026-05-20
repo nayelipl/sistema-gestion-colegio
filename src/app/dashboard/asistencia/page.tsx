@@ -147,10 +147,10 @@ export default function AsistenciaPage() {
         {seccionId && estudiantes.length > 0 && (
           <>
             <div style={s.resumenRow}>
-              <div style={{...s.resCard, borderColor:"#9ae6b4"}}><span style={{color:"#276749", fontWeight:"bold"}}>{resumen.presentes}</span><span style={s.resLabel}>Presentes</span></div>
-              <div style={{...s.resCard, borderColor:"#fed7d7"}}><span style={{color:"#c53030", fontWeight:"bold"}}>{resumen.ausentes}</span><span style={s.resLabel}>Ausentes</span></div>
-              <div style={{...s.resCard, borderColor:"#fbd38d"}}><span style={{color:"#c05621", fontWeight:"bold"}}>{resumen.tardanzas}</span><span style={s.resLabel}>Tardanzas</span></div>
-              <div style={{...s.resCard, borderColor:"#bee3f8"}}><span style={{color:"#2b6cb0", fontWeight:"bold"}}>{resumen.justificados}</span><span style={s.resLabel}>Justificados</span></div>
+              <div style={{...s.resCard, border:"1px solid #9ae6b4"}}><span style={{color:"#276749", fontWeight:"bold"}}>{resumen.presentes}</span><span style={s.resLabel}>Presentes</span></div>
+              <div style={{...s.resCard, border:"1px solid #fed7d7"}}><span style={{color:"#c53030", fontWeight:"bold"}}>{resumen.ausentes}</span><span style={s.resLabel}>Ausentes</span></div>
+              <div style={{...s.resCard, border:"1px solid #fbd38d"}}><span style={{color:"#c05621", fontWeight:"bold"}}>{resumen.tardanzas}</span><span style={s.resLabel}>Tardanzas</span></div>
+              <div style={{...s.resCard, border:"1px solid #bee3f8"}}><span style={{color:"#2b6cb0", fontWeight:"bold"}}>{resumen.justificados}</span><span style={s.resLabel}>Justificados</span></div>
             </div>
 
             {puedeRegistrar && (

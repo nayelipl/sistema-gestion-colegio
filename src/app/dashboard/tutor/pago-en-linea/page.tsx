@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { formatFechaLocal, formatFechaLarga } from "@/lib/formatear-fecha";
 import { ajustarFechasAPI } from "@/lib/ajustar-fechas";
 import { redistribuirExcedente } from "@/lib/redistribuir-excedente";
@@ -448,6 +447,9 @@ export default function PagoEnLineaPage() {
 
       setExito(`${data.mensaje} - Recibo: ${data.reciboNo}`);
 
+      // Esperar a que el recibo se guarde completamente
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Recargar cargos y recalcular resumen
       await cargarCargos();
 
@@ -513,6 +515,8 @@ export default function PagoEnLineaPage() {
     }
 
       setExito(`${data.mensaje} - Recibo: ${data.reciboNo}`);
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       setReciboParaImprimir({
         reciboNo: data.reciboNo,
@@ -1005,15 +1009,15 @@ const s: Record<string, React.CSSProperties> = {
   navBack: { color: "#fff", textDecoration: "none", fontSize: "14px" },
   navTitle: { fontWeight: "bold", fontSize: "16px" },
   navUser: { fontSize: "14px" },
-  contenido: { maxWidth: "1200px", margin: "0 auto", padding: "28px 20px" },
+  contenido: { maxWidth: "1200px", margin: "0 auto", padding: "28px 20px", boxSizing: "border-box" as const, wordBreak: "break-word" as const },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px", flexWrap: "wrap", gap: "12px" },
   titulo: { fontSize: "22px", fontWeight: "bold", color: "#2C1810", margin: "0 0 4px" },
   subtitulo: { fontSize: "13px", color: "#666", margin: 0 },
   estadoBadge: { padding: "8px 16px", borderRadius: "20px", fontSize: "13px", fontWeight: "bold", backgroundColor: "#fff", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" },
   estadoAlDia: { borderLeft: "4px solid #276749", color: "#276749" },
   estadoPendiente: { borderLeft: "4px solid #e53e3e", color: "#e53e3e" },
-  resumenGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" },
-  resCard: { background: "#fff", borderRadius: "10px", padding: "12px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", borderLeft: "4px solid #2C1810", display: "flex", flexDirection: "column", gap: "4px" },
+  resumenGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr)", gap: "12px", marginBottom: "20px" },
+  resCard: { background: "#fff", borderRadius: "10px", padding: "12px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", borderLeft: "4px solid #2C1810", display: "flex", flexDirection: "column" as const, gap: "4px", wordBreak: "break-word" as const },
   resValor: { fontSize: "18px", fontWeight: "bold", color: "#2C1810" },
   resLabel: { fontSize: "10px", color: "#666" },
   resSubLabel: { fontSize: "9px", color: "#888" },
@@ -1024,9 +1028,9 @@ const s: Record<string, React.CSSProperties> = {
   tabActivo: { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", cursor: "pointer", fontWeight: "bold" },
   card: { background: "#fff", borderRadius: "12px", padding: "20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
   resCardDisabled: { background: "#f5f5f5", borderLeft: "4px solid #ccc", opacity: 0.7 },
-  filtrosRow: { display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "16px", alignItems: "flex-end" },
-  conceptoSelect: { flex: 2, minWidth: "180px" },
-  select: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px" },
+  filtrosRow: { display: "flex", gap: "16px", flexWrap: "wrap" as const, marginBottom: "16px", alignItems: "flex-end" },
+  conceptoSelect: { flex: 2, minWidth: "180px", boxSizing: "border-box" as const },
+  select: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", boxSizing: "border-box" as const },
   inputFecha: { padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px" },
   btnFiltrar: { background: "#2C1810", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", cursor: "pointer" },
   btnLimpiar: { background: "#6c757d", color: "#fff", border: "none", borderRadius: "6px", padding: "9px 16px", cursor: "pointer" },
@@ -1034,27 +1038,27 @@ const s: Record<string, React.CSSProperties> = {
   btnGuardar: { background: "linear-gradient(135deg,#2C1810,#4a2518)", color: "#fff", border: "none", borderRadius: "8px", padding: "12px 28px", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
   balanceInfo: { background: "#f0f4f8", padding: "8px 12px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px", textAlign: "right" },
   label: { fontSize: "13px", fontWeight: "bold", color: "#333", display: "block", marginBottom: "4px" },
-  input: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px" },
+  input: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", boxSizing: "border-box" as const },
   textarea: { width: "100%", padding: "9px 12px", borderRadius: "7px", border: "1px solid #ddd", fontSize: "13px", fontFamily: "inherit" },
   formGroup: { marginBottom: "20px" },
-  tablaWrap: { overflowX: "auto", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
-  tabla: { width: "100%", borderCollapse: "collapse", fontSize: "13px", tableLayout: "fixed" },
+  tablaWrap: { overflowX: "auto", background: "#fff", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)",width: "100%", maxWidth: "100%", overflow: "auto" as const },
+  tabla: { width: "100%", borderCollapse: "collapse", fontSize: "13px", tableLayout: "fixed", minWidth: "700px" },
   thead: { background: "linear-gradient(135deg,#2C1810,#4a2518)" },
   th: { padding: "12px 14px", color: "#fff", fontSize: "12px", fontWeight: "bold", textAlign: "left" },
   td: { padding: "10px 14px", borderBottom: "1px solid #f0f0f0", verticalAlign: "middle" },
   tdNum: { padding: "10px 14px", borderBottom: "1px solid #f0f0f0", textAlign: "center", verticalAlign: "middle" },
   codigo: { fontSize: "10px", color: "#888" },
-  inputValor: { width: "100px", padding: "6px 8px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "12px", textAlign: "right", marginRight: "10px" },
+  inputValor: { width: "100px", padding: "6px 8px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "12px", textAlign: "right" as const, marginRight: "10px", boxSizing: "border-box" as const },
   checkbox: { width: "20px", height: "20px", cursor: "pointer", marginLeft: "10px" },
   totalesContainer: { textAlign: "right", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #eee" },
   totalBox: { fontSize: "16px", fontWeight: "bold", marginTop: "8px", color: "#2C1810" },
   metodoCard: { background: "#fff", borderRadius: "12px", padding: "16px", marginTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
   metodoInfo: { background: "#f0f4f8", borderRadius: "8px", padding: "10px 16px", marginTop: "16px", fontSize: "13px", color: "#333" },
   checkboxLabel: { display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", cursor: "pointer", padding: "4px" },
-  buttonGroup: { display: "flex", justifyContent: "flex-end", marginTop: "16px" },
+  buttonGroup: { display: "flex", justifyContent: "flex-end", marginTop: "16px", flexWrap: "wrap" as const, gap: "12px" },
   vacio: { textAlign: "center", padding: "40px", color: "#888", background: "#fff", borderRadius: "8px" },
   recibosContainer: { background: "#fff", borderRadius: "12px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)" },
-  filtrosGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "16px", marginBottom: "20px", alignItems: "flex-end" },
+  filtrosGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "50px", marginBottom: "20px", alignItems: "flex-end" },
   badgeActivo: { background: "#c6f6d5", color: "#276749", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold" },
   badgeAnulado: { background: "#fed7d7", color: "#c53030", padding: "2px 8px", borderRadius: "12px", fontSize: "10px", fontWeight: "bold", textDecoration: "line-through" },
   badgeTransporte: { fontSize: "10px", marginLeft: "4px" },
@@ -1063,6 +1067,6 @@ const s: Record<string, React.CSSProperties> = {
   dropdownContainer: { position: "relative" as const, width: "100%", marginBottom: "16px" },
   dropdownHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", border: "1px solid #ddd", borderRadius: "7px", cursor: "pointer", backgroundColor: "#fff", fontSize: "13px" },
   dropdownArrow: { fontSize: "12px", color: "#666" },
-  dropdownContent: { position: "absolute" as const, top: "100%", left: 0, right: 0, backgroundColor: "#fff", border: "1px solid #ddd", borderRadius: "7px", marginTop: "4px", padding: "10px", zIndex: 1000, maxHeight: "200px", overflowY: "auto" as const, boxShadow: "0 4px 8px rgba(0,0,0,0.1)" },
+  dropdownContent: { position: "absolute" as const, top: "100%", left: 0, right: 0, backgroundColor: "#fff", border: "1px solid #ddd", borderRadius: "7px", marginTop: "4px", padding: "10px", zIndex: 1000, maxHeight: "200px", overflowY: "auto" as const, boxShadow: "0 4px 8px rgba(0,0,0,0.1)", boxSizing: "border-box" },
   textoPlaceholder: { color: "#999", fontStyle: "italic" },
 };

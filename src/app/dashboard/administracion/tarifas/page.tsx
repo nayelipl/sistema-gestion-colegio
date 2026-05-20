@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { 
   generarConfiguracionCuotas, 
   obtenerFechaCuotaFormateada,
@@ -71,6 +70,10 @@ export default function TarifasPage() {
   const [transporteSaltarMeses, setTransporteSaltarMeses] = useState(1);
   const [transporteMesInicio, setTransporteMesInicio] = useState(9);
 
+  // Guardar nueva tarifa
+  const [backupData, setBackupData] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const rol = (session?.user as any)?.role ?? "";
 
   useEffect(() => {
@@ -117,16 +120,16 @@ export default function TarifasPage() {
     setTarifaId(tarifa.id);
     setAnioEscolar(tarifa.anioEscolar);
     setParametros({
-      valorInscripcion: tarifa.valorInscripcion,
-      recargoPorcentaje: tarifa.recargoPorcentaje,
-      colegiaturaNumCuotas: tarifa.colegiaturaNumCuotas,
-      colegiaturaDiaDesde: tarifa.colegiaturaDiaDesde,
-      colegiaturaDiaHasta: tarifa.colegiaturaDiaHasta,
-      colegiaturaDiasGracia: tarifa.colegiaturaDiasGracia,
-      transporteNumCuotas: tarifa.transporteNumCuotas,
-      transporteDiaDesde: tarifa.transporteDiaDesde,
-      transporteDiaHasta: tarifa.transporteDiaHasta,
-      transporteDiasGracia: tarifa.transporteDiasGracia,
+      valorInscripcion: tarifa.valorInscripcion || 0,
+      recargoPorcentaje: tarifa.recargoPorcentaje || 0,
+      colegiaturaNumCuotas: tarifa.colegiaturaNumCuotas || 0,
+      colegiaturaDiaDesde: tarifa.colegiaturaDiaDesde || 0,
+      colegiaturaDiaHasta: tarifa.colegiaturaDiaHasta || 0,
+      colegiaturaDiasGracia: tarifa.colegiaturaDiasGracia || 0,
+      transporteNumCuotas: tarifa.transporteNumCuotas || 0,
+      transporteDiaDesde: tarifa.transporteDiaDesde || 0,
+      transporteDiaHasta: tarifa.transporteDiaHasta || 0,
+      transporteDiasGracia: tarifa.transporteDiasGracia || 0,
       transporteCompletoAnual: tarifa.tarifasTransporte?.find((t: any) => t.tipo === "COMPLETO")?.valorAnual || 24000,
       transporteMedioAnual: tarifa.tarifasTransporte?.find((t: any) => t.tipo === "MEDIO (RECOGER)")?.valorAnual || 12000,
       transporteInscripcion: tarifa.tarifasTransporte?.find((t: any) => t.tipo === "COMPLETO")?.inscripcion || 0,
@@ -448,8 +451,9 @@ export default function TarifasPage() {
     }
   };
 
-  const nuevaTarifa = () => {
+  const nuevaTarifa = async () => {
     setModoEdicion(true);
+    setBackupData(true);
     setTarifaId(null);
     setAnioEscolar("");
     setParametros({
@@ -469,7 +473,28 @@ export default function TarifasPage() {
     });
     inicializarTarifasCursos(cursos);
     setCuotasConfig([]);
-    generarConfiguracionInicial();
+    setCuotasConfigTransporte([]);
+    setColegiaturaSaltarMeses(1);
+    setColegiaturaMesInicio(9);
+    setTransporteSaltarMeses(1);
+    setTransporteMesInicio(9);
+
+    // Desactivar tarifa anterior si existe
+    const tarifaActiva = tarifasLista.find(t => t.activo);
+    if (tarifaActiva) {
+      try {
+        await fetch(`/api/administracion/tarifas/${tarifaActiva.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ activo: false })
+        });
+      } catch (error) {
+        console.error("Error desactivando tarifa anterior:", error);
+      }
+    }
+
+    // Recargar para reflejar el cambio
+    await cargarTodo();
   };
 
   if (status === "loading" || cargando) {

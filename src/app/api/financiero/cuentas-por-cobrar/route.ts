@@ -92,14 +92,10 @@ export async function GET(req: Request) {
       saldoPendiente: { gt: 0 },
     };
 
-    if (fechaInicio) {
-      filtroCuentas.fechaVencimiento = { gte: fechaInicio };
-    }
-    if (fechaFin) {
-      filtroCuentas.fechaVencimiento = {
-        ...filtroCuentas.fechaVencimiento,
-        lte: fechaFin
-      };
+    if (fechaInicio || fechaFin) {
+      filtroCuentas.fechaVencimiento = {};
+      if (fechaInicio) filtroCuentas.fechaVencimiento.gte = fechaInicio;
+      if (fechaFin) filtroCuentas.fechaVencimiento.lte = fechaFin;
     }
 
     if (tutorId) {

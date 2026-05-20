@@ -654,7 +654,7 @@ export default function CobroOtrosIngresosPage() {
 }
 
 const asyncSelectStyles = {
-  control: (base: any) => ({ ...base, padding: "4px", borderRadius: "7px", borderColor: "#ddd", minHeight: "42px" }),
+  control: (base: any) => ({ ...base, padding: "4px", borderRadius: "7px", border: "1px solid #ddd", minHeight: "42px" }),
   menu: (base: any) => ({ ...base, zIndex: 9999 }),
 };
 
@@ -672,7 +672,7 @@ const styles: Record<string, React.CSSProperties> = {
   errorMsg: { background: "#fff5f5", border: "1px solid #fed7d7", color: "#c53030", borderRadius: "8px", padding: "12px 16px", marginBottom: "16px", fontSize: "13px" },
   tabs: { display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" },
   tab: { padding: "10px 20px", border: "2px solid #ddd", borderRadius: "8px", background: "#fff", cursor: "pointer", fontSize: "13px", fontWeight: "600", color: "#666" },
-  tabActivo: { borderColor: "#2C1810", color: "#2C1810", background: "#EBF3FB" },
+  tabActivo: { border: "1px solid #2C1810", color: "#2C1810", background: "#EBF3FB" },
   formCard: { background: "#fff", borderRadius: "12px", padding: "24px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" },
   formGroup: { marginBottom: "20px" },
   label: { fontSize: "13px", fontWeight: "bold", color: "#333", display: "block", marginBottom: "6px" },

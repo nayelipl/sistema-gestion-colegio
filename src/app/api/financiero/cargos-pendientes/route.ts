@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { actualizarEstadosCargos } from "@/lib/actualizar-estados-cargos";
 
+// Para obtiener los cargos con recargos
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,14 +24,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Se requiere tutorId" }, { status: 400 });
     }
 
+    // Actualizar estados y recargos antes de mostrar
     await actualizarEstadosCargos();
-
-    const tarifaActiva = await prisma.tarifaAnioEscolar.findFirst({
-      where: { activo: true },
-      select: { recargoPorcentaje: true }
-    });
-
-    const porcentajeRecargo = tarifaActiva?.recargoPorcentaje || 6; // 6% por defecto
 
     // Obtener el tutor
     const tutor = await prisma.tutor.findUnique({
@@ -61,41 +56,20 @@ export async function GET(req: NextRequest) {
       orderBy: { fechaVencimiento: "asc" },
     });
 
-    // Calcular recargo para cada cargo si está vencido
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    
-    const cargosConRecargo = cargos.map(cargo => {
-      const fechaVenc = new Date(cargo.fechaVencimiento);
-      const estaVencido = cargo.estado === "VENCIDO" || fechaVenc < hoy;
-      
-      const saldoPendienteNum = cargo.saldoPendiente.toNumber();
-      const montoOriginalNum = cargo.montoOriginal.toNumber();
-      
-      let recargoCalculado = 0;
-      if (estaVencido && saldoPendienteNum > 0) {
-        // Calcular recargo sobre el monto original
-        recargoCalculado = (montoOriginalNum * porcentajeRecargo) / 100;
-        // Redondear a 2 decimales
-        recargoCalculado = Math.round(recargoCalculado * 100) / 100;
-      }
+    // Formatear los cargos
+    const cargosFormateados = cargos.map(cargo => ({
+      id: cargo.id,
+      cargoNo: cargo.cargoNo,
+      tipo: cargo.tipo,
+      fechaVencimiento: cargo.fechaVencimiento,
+      monto: cargo.montoOriginal.toNumber(),
+      recargo: cargo.recargo.toNumber(),
+      montoTotal: cargo.montoTotal.toNumber(),
+      saldoPendiente: cargo.saldoPendiente.toNumber(),
+      estudiante: cargo.estudiante,
+    }));
 
-      const montoTotalConRecargo = montoOriginalNum + recargoCalculado;
-      
-      return {
-        id: cargo.id,
-        cargoNo: cargo.cargoNo,
-        tipo: cargo.tipo,
-        fechaVencimiento: cargo.fechaVencimiento,
-        monto: montoOriginalNum,
-        recargo: recargoCalculado,
-        montoTotal: montoTotalConRecargo,
-        saldoPendiente: saldoPendienteNum,
-        estudiante: cargo.estudiante,
-      };
-    });
-
-    const balanceTotal = cargosConRecargo.reduce((sum, cargo) => sum + Number(cargo.saldoPendiente), 0);    
+    const balanceTotal = cargosFormateados.reduce((sum, cargo) => sum + cargo.saldoPendiente, 0);
 
     return NextResponse.json({
       tutor: {
@@ -106,9 +80,8 @@ export async function GET(req: NextRequest) {
         direccion: tutor.direccion,
         celular: tutor.celular,
       },
-      cargosPendientes: cargosConRecargo,
+      cargosPendientes: cargosFormateados,
       balanceTotal,
-      porcentajeRecargo,
     });
   } catch (error) {
     console.error("Error GET /api/financiero/cargos-pendientes:", error);
